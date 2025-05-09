@@ -52,27 +52,265 @@ check_serial_baos_pattern(tvbuff_t *tvb)
 }
 
 void
-dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
 {
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_server_item_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_server_items,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
 
-	proto_tree_add_item(baos_payload_tree, hf_baos_start_server_item_id, tvb, BAOS_START_INDEX + 2, 2, ENC_BIG_ENDIAN);
-	proto_tree_add_item(baos_payload_tree, hf_baos_nr_of_server_items, tvb, BAOS_START_INDEX + 4, 2, ENC_BIG_ENDIAN);
-	/*-- Add ID of the starting server item
-	if packetBufferLen >= (dataFirstIndex + 2) then
-		baosTree:add
-					(
-						f_startServerItemId,
-						packetBuffer(dataFirstIndex, 2)
-					)
-	else return false end
-	-- Add number of server items
-	if packetBufferLen >= (dataFirstIndex + 4) then
-		baosTree:add
-					(
-						f_nrOfServerItems,
-						packetBuffer(dataFirstIndex + 2, 2)
-					)
-	else return false end*/
+void
+dissect_set_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
+{
+	// Variables for readability
+	const uint8_t nr_of_server_items = (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT8_MAX;
+
+	if (nr_of_server_items == UINT8_MAX)
+		return;
+
+	uint8_t server_item_id_offset		= BAOS_START_INDEX + 6;
+	uint8_t server_item_length_offset	= server_item_id_offset + 2;
+	uint8_t server_item_data_offset	= server_item_length_offset + 1;
+
+	uint8_t server_item_data_length = tvb_get_uint8(tvb, server_item_length_offset);
+
+	// Add ID of the starting server item
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_server_item_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of server items
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_server_items,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Loop through all server items
+	for (uint16_t i = 0; i < nr_of_server_items; i++)
+	{
+		// Add server item ID
+		if (tvb->length >= (uint8_t)(server_item_id_offset + 2))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_server_item_id,
+								tvb,
+								server_item_id_offset,
+								2,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add server item data length
+		if (tvb->length >= (uint8_t)(server_item_length_offset + 1))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_server_item_length,
+								tvb,
+								server_item_length_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add server item data
+		if (tvb->length >= (uint8_t)(server_item_data_offset + server_item_data_length))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_server_item_data,
+								tvb,
+								server_item_data_offset,
+								server_item_data_length,
+								ENC_BIG_ENDIAN
+								);
+		}
+		server_item_id_offset += server_item_data_length + 3;
+		if(tvb->length < (uint8_t)(server_item_id_offset + server_item_data_length + 3))
+			break;
+	}
+}
+
+void
+dissect_get_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
+{
+	// Variables for readability
+	const uint8_t nr_of_server_items = (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT8_MAX;
+
+	if (nr_of_server_items == UINT8_MAX)
+		return;
+
+	uint8_t server_item_id_offset		= BAOS_START_INDEX + 6;
+
+	// Add ID of the starting server item
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_server_item_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of server items
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_server_items,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	if (nr_of_server_items == 0)
+	{
+		// Error route
+		if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 7))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_server_item_id,
+								tvb,
+								server_item_id_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+	}
+	else
+	{
+		// Loop through all server items
+		for (uint16_t i = 0; i < nr_of_server_items; i++)
+		{
+			// Setup variables for current server item iteration
+			uint8_t server_item_length_offset	= server_item_id_offset + 2;
+			uint8_t server_item_data_offset		= server_item_length_offset + 1;
+			uint16_t server_item_id				= tvb_get_uint16(tvb, server_item_id_offset, ENC_BIG_ENDIAN);
+			uint8_t server_item_data_length		= tvb_get_uint8(tvb, server_item_length_offset);
+
+			// Add server item ID
+			if (tvb->length >= (uint8_t)(server_item_id_offset + 2))
+			{
+				proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_server_item_id,
+									tvb,
+									server_item_id_offset,
+									2,
+									ENC_BIG_ENDIAN
+									);
+			}
+			// Add server item data length
+			if (tvb->length >= (uint8_t)(server_item_length_offset + 1))
+			{
+				proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_server_item_length,
+									tvb,
+									server_item_length_offset,
+									1,
+									ENC_BIG_ENDIAN
+									);
+			}
+			// Add server item data
+			switch (server_item_id)
+			{
+				case HARDWARE_TYPE:
+					break;
+				case HARDWARE_VERSION:
+					break;
+				case FIRMWARE_VERSION:
+					break;
+				case KNX_MANUFACTURER_CODE_DEV:
+					break;
+				case KNX_MANUFACTURER_CODE_APP:
+					break;
+				case APPLICATION_ID_ETS:
+					break;
+				case APPLICATION_VERSION_ETS:
+					break;
+				case SERIAL_NUMBER:
+					break;
+				case TIME_SINCE_RESET:
+					break;
+				case BUS_CONNECTION_STATE:
+					break;
+				case MAX_BUFFER_SIZE:
+					break;
+				case LENGTH_OF_DESC_STRING:
+					break;
+				case BAUDRATE:
+					break;
+				case CURRENT_BUFF_SIZE:
+					break;
+				case PROGRAMMING_MODE:
+					break;
+				case PROTO_VERSION_BIN:
+					break;
+				case INDICATION_SENDING:
+					break;
+				case PROTO_VERSION_WEBSERVICE:
+					break;
+				case PROTO_VERSION_RESTSERVICE:
+					break;
+				case INDIVIDUAL_ADDRESS:
+					break;
+				default:
+					break;
+			}
+			if (tvb->length >= (uint8_t)(server_item_data_offset + server_item_data_length))
+			{
+				proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_server_item_data,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+			}
+			server_item_id_offset += server_item_data_length + 3;
+			if(tvb->length < (uint8_t)(server_item_id_offset + server_item_data_length + 3))
+				break;
+		}
+	}
 }
 
 static bool
@@ -93,21 +331,79 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 	col_set_str(pinfo->cinfo, COL_INFO, "BAOS Telegram");
 
 	// Base BAOS tree
-	proto_item *baos_ti = proto_tree_add_item(tree, proto_baos, tvb, start_byte_index, -1, ENC_NA);
+	proto_item *baos_ti = proto_tree_add_item(
+												tree,
+												proto_baos,
+												tvb,
+												start_byte_index,
+												-1,
+												ENC_NA
+												);
 	proto_tree *baos_tree = proto_item_add_subtree(baos_ti, ett_baos);
+
 	// FT 1.2 frame subtree
-	proto_item *ft12_ti = proto_tree_add_item(baos_tree, hf_baos_ft12, tvb, start_byte_index, 5, ENC_NA);
+	proto_item *ft12_ti = proto_tree_add_item(
+												baos_tree,
+												hf_baos_ft12,
+												tvb,
+												start_byte_index,
+												5,
+												ENC_NA
+												);
 	proto_tree *ft12_tree = proto_item_add_subtree(ft12_ti, ett_ft12);
+
 	// FT 1.2 header subtree
-	proto_item *ft12_header_ti = proto_tree_add_item(ft12_tree, hf_baos_ft12_header, tvb, start_byte_index, 5, ENC_NA);
+	proto_item *ft12_header_ti = proto_tree_add_item(
+													ft12_tree,
+													hf_baos_ft12_header,
+													tvb,
+													start_byte_index,
+													5,
+													ENC_NA
+													);
 	proto_tree *ft12_header_tree = proto_item_add_subtree(ft12_header_ti, ett_ft12_header);
 
 	// Add FT 1.2 header items
-	proto_tree_add_item(ft12_header_tree, hf_baos_ft12_startbyte, tvb, start_byte_index, 1, ENC_BIG_ENDIAN);
-	proto_tree_add_item(ft12_header_tree, hf_baos_ft12_lengthbyte, tvb, start_byte_index + 1, 1, ENC_BIG_ENDIAN);
-	proto_tree_add_item(ft12_header_tree, hf_baos_ft12_lengthbyte, tvb, start_byte_index + 2, 1, ENC_BIG_ENDIAN);
-	proto_tree_add_item(ft12_header_tree, hf_baos_ft12_startbyte, tvb, start_byte_index + 3, 1, ENC_BIG_ENDIAN);
-	proto_tree_add_item(ft12_header_tree, hf_baos_ft12_controllbyte, tvb, start_byte_index + 4, 1, ENC_BIG_ENDIAN);
+	proto_tree_add_item(
+						ft12_header_tree,
+						hf_baos_ft12_startbyte,
+						tvb,
+						start_byte_index,
+						1,
+						ENC_BIG_ENDIAN
+						);
+	proto_tree_add_item(
+						ft12_header_tree,
+	 					hf_baos_ft12_lengthbyte,
+					 	tvb,
+					 	start_byte_index + 1,
+					  	1,
+						ENC_BIG_ENDIAN
+						);
+	proto_tree_add_item(
+						ft12_header_tree,
+	 					hf_baos_ft12_lengthbyte,
+					 	tvb,
+					 	start_byte_index + 2,
+					  	1,
+						ENC_BIG_ENDIAN
+						);
+	proto_tree_add_item(
+						ft12_header_tree,
+	 					hf_baos_ft12_startbyte,
+					 	tvb,
+					 	start_byte_index + 3,
+					  	1,
+						ENC_BIG_ENDIAN
+						);
+	proto_tree_add_item(
+						ft12_header_tree,
+	 					hf_baos_ft12_controllbyte,
+					 	tvb,
+					 	start_byte_index + 4,
+					  	1,
+						ENC_BIG_ENDIAN
+						);
 
 	// BAOS payload subtree
 	proto_item *baos_payload_ti = proto_tree_add_item(ft12_tree, hf_baos_baos_payload, tvb, BAOS_START_INDEX, -1, ENC_NA);
@@ -126,6 +422,7 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			dissect_get_server_item_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_SERVER_ITEM_REQ_CODE:
+			dissect_set_server_item_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_DESC_REQ_CODE:
 			break;
@@ -159,6 +456,8 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			break;
 		case SERVER_ITEM_IND_CODE:
 			break;
+		default:
+			break;
 	}
 
 	return true;
@@ -170,70 +469,102 @@ proto_register_baos(void)
 	static hf_register_info hf[] = {
 		{
 			&hf_baos_ft12,
-			{"FT 1.2", "baos.ft12",
-				FT_PROTOCOL
-			},
+			{"FT 1.2",
+					"baos.ft12",
+					FT_PROTOCOL},
 		},
 		{
 			&hf_baos_ft12_header,
-			{"FT 1.2 Header", "baos.ft12.ft12_header",
-				FT_PROTOCOL
-			},
+			{"FT 1.2 Header",
+					"baos.ft12.ft12_header",
+					FT_PROTOCOL},
 		},
 		{
 			&hf_baos_ft12_startbyte,
-			{"FT 1.2 start byte", "baos.ft12.startbyte",
-				FT_UINT8, BASE_HEX,
-				NULL, 0x0,
-				NULL, HFILL
-			}
+			{"FT 1.2 start byte",
+					"baos.ft12.startbyte",
+					FT_UINT8, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
 		},
-		{ &hf_baos_ft12_lengthbyte,
-			{ "FT 1.2 length byte", "baos.ft12.lengthbyte",
-			FT_UINT8, BASE_DEC,
-			NULL, 0x0,
-			NULL, HFILL }
+		{
+			&hf_baos_ft12_lengthbyte,
+			{"FT 1.2 length byte",
+					"baos.ft12.lengthbyte",
+					FT_UINT8, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
 		},
-		{ &hf_baos_ft12_controllbyte,
-			{ "FT 1.2 controll byte", "baos.ft12.controllbyte",
-			FT_UINT8, BASE_HEX,
-			NULL, 0x0,
-			NULL, HFILL }
+		{
+			&hf_baos_ft12_controllbyte,
+			{"FT 1.2 controll byte",
+					"baos.ft12.controllbyte",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_ft12_control_bytes), 0x0,
+					NULL, HFILL}
 		},
 		{
 			&hf_baos_baos_payload,
-			{"BAOS payload", "baos.payload",
-				FT_PROTOCOL
-			},
+			{"BAOS payload",
+					"baos.payload",
+					FT_PROTOCOL},
 		},
 		{
 			&hf_baos_baos_mainservice,
-			{"BAOS main service", "baos.mainservice",
-				FT_UINT8, BASE_HEX,
-				NULL, 0x0,
-				NULL, HFILL
-			}
+			{"BAOS main service",
+					"baos.mainservice",
+					FT_UINT8, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
 		},
 		{
 			&hf_baos_baos_subservice,
-			{"BAOS subservice", "baos.subservice",
-				FT_UINT8, BASE_HEX,
-				VALS(subservices), 0x0,
-				NULL, HFILL
-			}
+			{"BAOS subservice",
+					"baos.subservice",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_subservices), 0x0,
+					NULL, HFILL}
 		},
-		{ &hf_baos_start_server_item_id,
-		{ "Start server item ID", "baos.start_server_item_id",
-		FT_UINT16, BASE_DEC,
-		NULL, 0x0,
-		NULL, HFILL }
+		{
+			&hf_baos_start_server_item_id,
+			{"Start server item ID",
+					"baos.start_server_item_id",
+					FT_UINT16, BASE_DEC,
+					VALS(vs_server_items), 0x0,
+					NULL, HFILL}
 		},
-		{ &hf_baos_nr_of_server_items,
-		{ "Number of server items", "baos.nr_of_server_items",
-		FT_UINT16, BASE_DEC,
-		NULL, 0x0,
-		NULL, HFILL }
+		{
+			&hf_baos_nr_of_server_items,
+			{"Number of server items",
+					"baos.nr_of_server_items",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
 		},
+		{
+			&hf_baos_server_item_id,
+			{"Server item ID",
+					"baos.server_item_id",
+					FT_UINT16, BASE_DEC,
+					VALS(vs_server_items), 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_server_item_length,
+			{"Server item length",
+					"baos.server_item_length",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_server_item_data,
+			{"Server item data",
+					"baos.server_item_data",
+					FT_BYTES, SEP_SPACE,
+					NULL, 0x0,
+					NULL, HFILL}
+		}
 	};
 
 	static int *ett[] = {
