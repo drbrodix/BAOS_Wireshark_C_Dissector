@@ -11,14 +11,6 @@
 #define BAOS_MAINSERVICE_CODE 0xF0
 #define BAOS_START_INDEX start_byte_index + 5
 
-enum CONTROL_BYTES
-{
-    CR_TX_ODD   = 0x73,
-    CR_TX_EVEN  = 0x53,
-    CR_RX_ODD   = 0xF3,
-    CR_RX_EVEN  = 0xD3
-};
-
 enum SUBSERVICE_CODES
 {
     GET_SERVER_ITEM_REQ_CODE        = 0x01,
@@ -39,6 +31,37 @@ enum SUBSERVICE_CODES
     SET_PARAMETER_BYTE_RES_CODE     = 0x88,
     DATAPOINT_VALUE_IND_CODE        = 0xC1,
     SERVER_ITEM_IND_CODE            = 0xC2
+};
+
+enum OBJECT_SERVER_RESPONSE_CODES
+{
+    SUCCESS                 = 0x00,
+    INTERNAL_ERROR          = 0x01,
+    NO_ELEMENT_FOUND        = 0x02,
+    BUFFER_TOO_SMALL        = 0x03,
+    ITEM_NOT_WRITABLE       = 0x04,
+    SERVICE_NOT_SUPPORTED   = 0x05,
+    BAD_SERVICE_PARAMETER   = 0x06,
+    BAD_ID                  = 0x07,
+    BAD_COMMAND_VALUE       = 0x08,
+    BAD_LENGTH              = 0x09,
+    MESSAGE_INCONSISTENT    = 0x0A,
+    OBJECT_SERVER_BUSY      = 0x0B
+};
+
+enum CONTROL_BYTES
+{
+    CR_TX_ODD   = 0x73,
+    CR_TX_EVEN  = 0x53,
+    CR_RX_ODD   = 0xF3,
+    CR_RX_EVEN  = 0xD3
+};
+
+enum BAUDRATES
+{
+    BAUD_UNKNOWN= 0x00,
+    BAUD_19200  = 0x01,
+    BAUD_115200 = 0x02
 };
 
 enum SERVER_ITEMS
@@ -65,223 +88,6 @@ enum SERVER_ITEMS
     INDIVIDUAL_ADDRESS          = 20
 };
 
-/*local function dissectGetServerItemRes(packetBuffer, packetBufferLen, dataFirstIndex, baosTree)
-
-    -- Variables for readability
-    local bufferBytesArray <const>  = packetBuffer:bytes()
-    -- Get nrOfServerItems if the bytes are accessible or assign nil to the variable
-    local nrOfServerItems = (packetBufferLen >= (dataFirstIndex + 4)) and bufferBytesArray:int(dataFirstIndex + 2, 2) or nil
-    local isErrorRes                = nrOfServerItems == 0
-
-    -- Index offsets used while looping through all server items
-    local serverItemIdOffset        = dataFirstIndex + 4
-    local serverItemLengthOffset    = serverItemIdOffset + 2
-    local serverItemDataOffset      = serverItemLengthOffset + 1
-
-    -- Add ID of the starting server item
-    if packetBufferLen >= (dataFirstIndex + 2) then
-        baosTree:add
-                    (
-                        f_startServerItemId,
-                        packetBuffer(dataFirstIndex, 2)
-                    )
-    else return false end
-    -- Add number of server items
-    if packetBufferLen >= (dataFirstIndex + 4) then
-        baosTree:add
-                    (
-                        f_nrOfServerItems,
-                        packetBuffer(dataFirstIndex + 2, 2)
-                    )
-    else return false end
-
-    if isErrorRes then
-        -- Add object server response (what kind of error)
-        if packetBufferLen >= (serverItemIdOffset + 1) then
-            baosTree:add
-                        (
-                            f_objectServerResponse,
-                            packetBuffer(serverItemIdOffset, 1)
-                        )
-        else return false end
-    else
-        -- Get serverItemLength and serverItemId if the bytes are accessible or assign nil to the variables
-        local serverItemLength  = (packetBufferLen >= (serverItemLengthOffset + 1)) and bufferBytesArray:int(serverItemLengthOffset, 1) or nil
-        local serverItemId      = (packetBufferLen >= (serverItemIdOffset + 2)) and bufferBytesArray:int(serverItemIdOffset, 2) or nil
-
-        -- Base serverItemProtoField-Add function
-        local function addBasicProtoField (protoField)
-            if packetBufferLen >= (serverItemDataOffset + serverItemLength) then
-                baosTree:add
-                            (
-                                protoField,
-                                packetBuffer(serverItemDataOffset, serverItemLength)
-                            )
-            else return false end
-        end
-
-        -- Version serverItemProtoField-Add function
-        local function addVersionProtoField ()
-            if packetBufferLen >= (serverItemDataOffset + serverItemLength) then
-                local versionTree = baosTree:add
-                                                (
-                                                    f_version,
-                                                    packetBuffer(serverItemDataOffset, serverItemLength)
-                                                )
-                versionTree:add
-                                (
-                                    f_versionMajor,
-                                    packetBuffer(serverItemDataOffset, serverItemLength)
-                                )
-                versionTree:add
-                                (
-                                    f_versionMinor,
-                                    packetBuffer(serverItemDataOffset, serverItemLength)
-                                )
-            else return false end
-        end
-
-        -- KNX-Address serverItemProtoField-Add function
-        local function addKNXAddressProtoField ()
-
-            if packetBufferLen >= (serverItemDataOffset + serverItemLength) then
-                local KNXAddressTree = baosTree:add
-                                                    (
-                                                        f_KNXAddress,
-                                                        packetBuffer(serverItemDataOffset, serverItemLength)
-                                                    )
-                KNXAddressTree:add
-                                    (
-                                        f_KNXAreaAddress,
-                                        packetBuffer(serverItemDataOffset, 1)
-                                    )
-                KNXAddressTree:add
-                                    (
-                                        f_KNXLineAddress,
-                                        packetBuffer(serverItemDataOffset, 1)
-                                    )
-                KNXAddressTree:add
-                                    (
-                                        f_KNXDeviceAddress,
-                                        packetBuffer(serverItemDataOffset + 1, 1)
-                                    )
-            else return false end
-        end
-
-        -- Custom dissector functions for the server items
-        local serverItemFuncs =
-                                {
-                                    -- Hardware type
-                                    [1] = function ()
-                                        addBasicProtoField(f_hardwareType)
-                                    end,
-                                    -- Hardware version
-                                    [2] = function ()
-                                        addVersionProtoField()
-                                    end,
-                                    -- Firmware version
-                                    [3] = function ()
-                                        addVersionProtoField()
-                                    end,
-                                    -- KNX manufacturer code DEV
-                                    [4] = function ()
-                                        addBasicProtoField(f_KNXManCode)
-                                    end,
-                                    -- KNX manufacturer code APP
-                                    [5] = function ()
-                                        addBasicProtoField(f_KNXManCode)
-                                    end,
-                                    -- Application ID (ETS)
-                                    [6] = function ()
-                                        addBasicProtoField(f_appID)
-                                    end,
-                                    -- Application version (ETS)
-                                    [7] = function ()
-                                        addVersionProtoField()
-                                    end,
-                                    -- Serial number
-                                    [8] = function ()
-                                        addBasicProtoField(f_serialNumber)
-                                    end,
-                                    -- Time since reset [ms]
-                                    [9] = function ()
-                                        addBasicProtoField(f_timeSinceReset)
-                                    end,
-                                    -- Bus connection state
-                                    [10] = function ()
-                                        addBasicProtoField(f_serverItemStatus)
-                                    end,
-                                    -- Maximum buffer size
-                                    [11] = function ()
-                                        addBasicProtoField(f_bufferSize)
-                                    end,
-                                    -- Length of description string
-                                    [12] = function ()
-                                        addBasicProtoField(f_serverItemDescStrLen)
-                                    end,
-                                    -- Baudrate
-                                    [13] = function ()
-                                        addBasicProtoField(f_baudrate)
-                                    end,
-                                    -- Current buffer size
-                                    [14] = function ()
-                                        addBasicProtoField(f_bufferSize)
-                                    end,
-                                    -- Programming mode
-                                    [15] = function ()
-                                        addBasicProtoField(f_serverItemStatus)
-                                    end,
-                                    -- Protocol Version (Binary)
-                                    [16] = function ()
-                                        addVersionProtoField()
-                                    end,
-                                    -- Indication Sending
-                                    [17] = function ()
-                                        addBasicProtoField(f_serverItemStatus)
-                                    end,
-                                    -- Protocol Version (WebService)
-                                    [18] = function ()
-                                        addVersionProtoField()
-                                    end,
-                                    -- Protocol Version (RestService)
-                                    [19] = function ()
-                                        addVersionProtoField()
-                                    end,
-                                    -- Individual Address
-                                    [20] = function ()
-                                        addKNXAddressProtoField()
-                                    end,
-                                }
-
-        -- Loop through all server items
-        for i = 1, nrOfServerItems, 1 do
-            -- Add server item ID
-            if packetBufferLen >= (serverItemIdOffset + 2) then
-                baosTree:add
-                            (
-                                f_serverItemId,
-                                packetBuffer(serverItemIdOffset, 2)
-                            )
-            else return false end
-            -- Add server item data length
-            if packetBufferLen >= (serverItemLengthOffset + 1) then
-                baosTree:add
-                            (
-                                f_serverItemLength,
-                                packetBuffer(serverItemLengthOffset, 1)
-                            )
-            else return false end
-            -- Add server item data
-            serverItemFuncs[serverItemId]()
-
-            -- Set offset to start byte of the next server item
-            if packetBufferLen >= (serverItemIdOffset + 3 + serverItemLength) then
-                serverItemIdOffset = serverItemIdOffset + 3 + serverItemLength
-            else break end
-        end
-    end
-end*/
-
 // Protocol declaration
 static int proto_baos;
 
@@ -294,17 +100,60 @@ static int hf_baos_ft12_controllbyte;
 static int hf_baos_baos_payload;
 static int hf_baos_baos_mainservice;
 static int hf_baos_baos_subservice;
+static int hf_baos_object_server_response;
 static int hf_baos_start_server_item_id;
 static int hf_baos_nr_of_server_items;
 static int hf_baos_server_item_id;
 static int hf_baos_server_item_length;
 static int hf_baos_server_item_data;
+static int hf_baos_si_hardware_type;
+static int hf_baos_si_version;
+static int hf_baos_si_version_major;
+static int hf_baos_si_version_minor;
+static int hf_baos_si_knx_man_code;
+static int hf_baos_si_app_id;
+static int hf_baos_si_serial_number;
+static int hf_baos_si_time_since_reset;
+static int hf_baos_si_server_item_status;
+static int hf_baos_si_buffer_size;
+static int hf_baos_si_server_item_desc_str_len;
+static int hf_baos_si_baudrate;
+static int hf_baos_si_knx_address;
+static int hf_baos_si_knx_address_area;
+static int hf_baos_si_knx_address_line;
+static int hf_baos_si_knx_address_device;
 
 static const value_string vs_ft12_control_bytes[] = {
     {CR_TX_EVEN, "TX - Even"},
     {CR_TX_ODD, "TX - Odd"},
     {CR_RX_EVEN, "RX - Even"},
     {CR_RX_ODD, "RX - Odd"}
+};
+
+static const value_string vs_object_server_response[] = {
+    {SUCCESS, "Success"},
+    {INTERNAL_ERROR, "Internal error"},
+    {NO_ELEMENT_FOUND, "No element found"},
+    {BUFFER_TOO_SMALL, "Buffer is too small"},
+    {ITEM_NOT_WRITABLE, "Item is not writable"},
+    {SERVICE_NOT_SUPPORTED, "Service is not supported"},
+    {BAD_SERVICE_PARAMETER, "Bad service parameter"},
+    {BAD_ID, "Bad ID"},
+    {BAD_COMMAND_VALUE, "Bad command / value"},
+    {BAD_LENGTH, "Bad length"},
+    {MESSAGE_INCONSISTENT, "Message inconsistent"},
+    {OBJECT_SERVER_BUSY, "Object server is busy"}
+};
+
+static const value_string vs_baudrate[] = {
+    {BAUD_UNKNOWN, "Unknown Baudrate"},
+    {BAUD_19200, "19200"},
+    {BAUD_115200, "115200"}
+};
+
+static const true_false_string vs_server_item_status = {
+    "True",
+    "False"
 };
 
 // Refer to the BAOS documentation to
@@ -362,6 +211,8 @@ static int ett_baos;
 static int ett_ft12;
 static int ett_ft12_header;
 static int ett_baos_payload;
+static int ett_version;
+static int ett_address;
 static int ett_ft12_footer;
 
 uint8_t
@@ -371,13 +222,46 @@ void
 dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
 
 void
-dissect_set_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
 
 void
-dissect_get_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+dissect_get_datapoint_desc_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_set_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_set_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
 
 void
 dissect_set_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_desc_string_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_set_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_get_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
+
+void
+dissect_set_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
 
 static bool
 dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_);

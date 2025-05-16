@@ -52,128 +52,14 @@ check_serial_baos_pattern(tvbuff_t *tvb)
 }
 
 void
-dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
+dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
 {
-	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
-	{
-		proto_tree_add_item(
-							baos_payload_tree,
-							hf_baos_start_server_item_id,
-							tvb,
-							BAOS_START_INDEX + 2,
-							2,
-							ENC_BIG_ENDIAN
-							);
-	}
-	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6))
-	{
-		proto_tree_add_item(
-							baos_payload_tree,
-							hf_baos_nr_of_server_items,
-							tvb,
-							BAOS_START_INDEX + 4,
-							2,
-							ENC_BIG_ENDIAN
-							);
-	}
-}
-
-void
-dissect_set_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
-{
-	// Variables for readability
+	// Store nr of server items in var if it's in TVB's boundaries,
+	// or assign UINT8_MAX to var if TVB is not long enough
 	const uint8_t nr_of_server_items = (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6)) ?
 										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT8_MAX;
 
-	if (nr_of_server_items == UINT8_MAX)
-		return;
-
-	uint8_t server_item_id_offset		= BAOS_START_INDEX + 6;
-	uint8_t server_item_length_offset	= server_item_id_offset + 2;
-	uint8_t server_item_data_offset	= server_item_length_offset + 1;
-
-	uint8_t server_item_data_length = tvb_get_uint8(tvb, server_item_length_offset);
-
-	// Add ID of the starting server item
-	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
-	{
-		proto_tree_add_item(
-							baos_payload_tree,
-							hf_baos_start_server_item_id,
-							tvb,
-							BAOS_START_INDEX + 2,
-							2,
-							ENC_BIG_ENDIAN
-							);
-	}
-	// Add number of server items
-	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6))
-	{
-		proto_tree_add_item(
-							baos_payload_tree,
-							hf_baos_nr_of_server_items,
-							tvb,
-							BAOS_START_INDEX + 4,
-							2,
-							ENC_BIG_ENDIAN
-							);
-	}
-	// Loop through all server items
-	for (uint16_t i = 0; i < nr_of_server_items; i++)
-	{
-		// Add server item ID
-		if (tvb->length >= (uint8_t)(server_item_id_offset + 2))
-		{
-			proto_tree_add_item(
-								baos_payload_tree,
-								hf_baos_server_item_id,
-								tvb,
-								server_item_id_offset,
-								2,
-								ENC_BIG_ENDIAN
-								);
-		}
-		// Add server item data length
-		if (tvb->length >= (uint8_t)(server_item_length_offset + 1))
-		{
-			proto_tree_add_item(
-								baos_payload_tree,
-								hf_baos_server_item_length,
-								tvb,
-								server_item_length_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-		}
-		// Add server item data
-		if (tvb->length >= (uint8_t)(server_item_data_offset + server_item_data_length))
-		{
-			proto_tree_add_item(
-								baos_payload_tree,
-								hf_baos_server_item_data,
-								tvb,
-								server_item_data_offset,
-								server_item_data_length,
-								ENC_BIG_ENDIAN
-								);
-		}
-		server_item_id_offset += server_item_data_length + 3;
-		if(tvb->length < (uint8_t)(server_item_id_offset + server_item_data_length + 3))
-			break;
-	}
-}
-
-void
-dissect_get_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
-{
-	// Variables for readability
-	const uint8_t nr_of_server_items = (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6)) ?
-										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT8_MAX;
-
-	if (nr_of_server_items == UINT8_MAX)
-		return;
-
-	uint8_t server_item_id_offset		= BAOS_START_INDEX + 6;
+	uint8_t server_item_id_offset = BAOS_START_INDEX + 6;
 
 	// Add ID of the starting server item
 	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
@@ -206,7 +92,7 @@ dissect_get_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, const 
 		{
 			proto_tree_add_item(
 								baos_payload_tree,
-								hf_baos_server_item_id,
+								hf_baos_object_server_response,
 								tvb,
 								server_item_id_offset,
 								1,
@@ -250,67 +136,272 @@ dissect_get_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, const 
 									);
 			}
 			// Add server item data
-			switch (server_item_id)
-			{
-				case HARDWARE_TYPE:
-					break;
-				case HARDWARE_VERSION:
-					break;
-				case FIRMWARE_VERSION:
-					break;
-				case KNX_MANUFACTURER_CODE_DEV:
-					break;
-				case KNX_MANUFACTURER_CODE_APP:
-					break;
-				case APPLICATION_ID_ETS:
-					break;
-				case APPLICATION_VERSION_ETS:
-					break;
-				case SERIAL_NUMBER:
-					break;
-				case TIME_SINCE_RESET:
-					break;
-				case BUS_CONNECTION_STATE:
-					break;
-				case MAX_BUFFER_SIZE:
-					break;
-				case LENGTH_OF_DESC_STRING:
-					break;
-				case BAUDRATE:
-					break;
-				case CURRENT_BUFF_SIZE:
-					break;
-				case PROGRAMMING_MODE:
-					break;
-				case PROTO_VERSION_BIN:
-					break;
-				case INDICATION_SENDING:
-					break;
-				case PROTO_VERSION_WEBSERVICE:
-					break;
-				case PROTO_VERSION_RESTSERVICE:
-					break;
-				case INDIVIDUAL_ADDRESS:
-					break;
-				default:
-					break;
-			}
 			if (tvb->length >= (uint8_t)(server_item_data_offset + server_item_data_length))
 			{
-				proto_tree_add_item(
+				switch (server_item_id)
+				{
+					case HARDWARE_TYPE:
+						proto_tree_add_item(
 									baos_payload_tree,
-									hf_baos_server_item_data,
+									hf_baos_si_hardware_type,
 									tvb,
 									server_item_data_offset,
 									server_item_data_length,
 									ENC_BIG_ENDIAN
 									);
+						break;
+					case HARDWARE_VERSION:
+					case FIRMWARE_VERSION:
+					case APPLICATION_VERSION_ETS:
+					case PROTO_VERSION_BIN:
+					case PROTO_VERSION_WEBSERVICE:
+					case PROTO_VERSION_RESTSERVICE:
+						proto_item *version_ti = proto_tree_add_item(
+																	baos_payload_tree,
+																	hf_baos_si_version,
+																	tvb,
+																	server_item_data_offset,
+																	server_item_data_length,
+																	ENC_BIG_ENDIAN
+																	);
+						proto_tree *version_tree = proto_item_add_subtree(version_ti,ett_version);
+						proto_tree_add_item(
+									version_tree,
+									hf_baos_si_version_major,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						proto_tree_add_item(
+									version_tree,
+									hf_baos_si_version_minor,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case KNX_MANUFACTURER_CODE_DEV:
+					case KNX_MANUFACTURER_CODE_APP:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_knx_man_code,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case APPLICATION_ID_ETS:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_app_id,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case SERIAL_NUMBER:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_serial_number,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case TIME_SINCE_RESET:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_time_since_reset,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case BUS_CONNECTION_STATE:
+					case PROGRAMMING_MODE:
+					case INDICATION_SENDING:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_server_item_status,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case MAX_BUFFER_SIZE:
+					case CURRENT_BUFF_SIZE:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_buffer_size,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case LENGTH_OF_DESC_STRING:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_server_item_desc_str_len,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case BAUDRATE:
+						proto_tree_add_item(
+									baos_payload_tree,
+									hf_baos_si_baudrate,
+									tvb,
+									server_item_data_offset,
+									server_item_data_length,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					case INDIVIDUAL_ADDRESS:
+						proto_item *address_ti = proto_tree_add_item(
+											baos_payload_tree,
+											hf_baos_si_knx_address,
+											tvb,
+											server_item_data_offset,
+											server_item_data_length,
+											ENC_BIG_ENDIAN
+											);
+						proto_tree *address_tree = proto_item_add_subtree(address_ti,ett_address);
+						proto_tree_add_item(
+									address_tree,
+									hf_baos_si_knx_address_area,
+									tvb,
+									server_item_data_offset,
+									1,
+									ENC_BIG_ENDIAN
+									);
+						proto_tree_add_item(
+									address_tree,
+									hf_baos_si_knx_address_line,
+									tvb,
+									server_item_data_offset,
+									1,
+									ENC_BIG_ENDIAN
+									);
+						proto_tree_add_item(
+									address_tree,
+									hf_baos_si_knx_address_device,
+									tvb,
+									server_item_data_offset + 1,
+									1,
+									ENC_BIG_ENDIAN
+									);
+						break;
+					default:
+						break;
+				}
 			}
 			server_item_id_offset += server_item_data_length + 3;
 			if(tvb->length < (uint8_t)(server_item_id_offset + server_item_data_length + 3))
 				break;
 		}
 	}
+}
+
+void
+dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
+{
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_server_item_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	if (tvb->length >= (uint8_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_server_items,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
+
+void
+dissect_get_datapoint_desc_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_set_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_set_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_set_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_desc_string_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_set_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_get_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+}
+
+void
+dissect_set_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
 }
 
 static bool
@@ -422,35 +513,49 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			dissect_get_server_item_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_SERVER_ITEM_REQ_CODE:
-			dissect_set_server_item_req(tvb, baos_payload_tree, start_byte_index);
+			dissect_long_server_item_telegram(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_DESC_REQ_CODE:
+			dissect_get_datapoint_desc_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DESC_STRING_REQ_CODE:
+			dissect_get_desc_string_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_VALUE_REQ_CODE:
+			dissect_get_datapoint_value_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_DATAPOINT_VALUE_REQ_CODE:
+			dissect_set_datapoint_value_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_PARAMETER_BYTE_REQ_CODE:
+			dissect_get_parameter_byte_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_PARAMETER_BYTE_REQ_CODE:
+			dissect_set_parameter_byte_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_SERVER_ITEM_RES_CODE:
+			dissect_long_server_item_telegram(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_SERVER_ITEM_RES_CODE:
+			dissect_set_server_item_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_DESC_RES_CODE:
+			dissect_get_datapoint_desc_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DESC_STRING_RES_CODE:
+			dissect_get_desc_string_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_VALUE_RES_CODE:
+			dissect_get_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_DATAPOINT_VALUE_RES_CODE:
+			dissect_set_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_PARAMETER_BYTE_RES_CODE:
+			dissect_get_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_PARAMETER_BYTE_RES_CODE:
+			dissect_set_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case DATAPOINT_VALUE_IND_CODE:
 			break;
@@ -526,6 +631,14 @@ proto_register_baos(void)
 					NULL, HFILL}
 		},
 		{
+			&hf_baos_object_server_response,
+			{"Object server response",
+					"baos.error_code",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_object_server_response), 0x0,
+					NULL, HFILL}
+		},
+		{
 			&hf_baos_start_server_item_id,
 			{"Start server item ID",
 					"baos.start_server_item_id",
@@ -564,7 +677,149 @@ proto_register_baos(void)
 					FT_BYTES, SEP_SPACE,
 					NULL, 0x0,
 					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_hardware_type,
+			{"Hardware type",
+					"baos.server_item.hardware_type",
+					FT_UINT48, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_version,
+			{"Version number",
+					"baos.server_item.version",
+					FT_UINT8, BASE_HEX,
+					NULL, 0xFF,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_version_major,
+			{"Major version number",
+					"baos.server_item.version_major",
+					FT_UINT8, BASE_DEC,
+					NULL, 0xF0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_version_minor,
+			{"Minor version number",
+					"baos.server_item.version_minor",
+					FT_UINT8, BASE_DEC,
+					NULL, 0x0F,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_knx_man_code,
+			{"KNX manufacturer code",
+					"baos.server_item.knx_man_code",
+					FT_UINT16, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_app_id,
+			{"Application ID",
+					"baos.server_item.app_id",
+					FT_UINT16, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_serial_number,
+			{"Serial number",
+					"baos.server_item.serial_number",
+					FT_BYTES, SEP_SPACE,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_time_since_reset,
+			{"Time since reset [ms]",
+					"baos.server_item.app_id",
+					FT_UINT32, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_server_item_status,
+			{"Status",
+					"baos.server_item.server_item_status",
+					FT_BOOLEAN, BASE_HEX,
+					TFS(&vs_server_item_status), 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_buffer_size,
+			{"Buffer size [bytes]",
+					"baos.server_item.buffer_size",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_server_item_desc_str_len,
+			{"Length of description string",
+					"baos.server_item.desc_str_len",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_baudrate,
+			{"Baudrate",
+					"baos.server_item.baudrate",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_baudrate), 0x0,
+					NULL, HFILL}
+		},{
+			&hf_baos_si_knx_address,
+			{"Individual KNX address",
+					"baos.server_item.knx_address",
+					FT_UINT16, BASE_HEX,
+					NULL, 0xFFFF,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_knx_address_area,
+			{"Area address",
+					"baos.server_item.knx_area_address",
+					FT_UINT8, BASE_DEC,
+					NULL, 0xF0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_knx_address_line,
+			{"Line address",
+					"baos.server_item.knx_line_address",
+					FT_UINT8, BASE_DEC,
+					NULL, 0x0F,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_si_knx_address_device,
+			{"Device address",
+					"baos.server_item.knx_device_address",
+					FT_UINT8, BASE_DEC,
+					NULL, 0xFF,
+					NULL, HFILL}
 		}
+		/*static int hf_baos_si_version;
+		static int hf_baos_si_version_major;
+		static int hf_baos_si_version_minor;
+		static int hf_baos_si_man_code;
+		static int hf_baos_si_app_id;
+		static int hf_baos_si_serial_number;
+		static int hf_baos_si_time_since_reset;
+		static int hf_baos_si_server_item_status;
+		static int hf_baos_si_buffer_size;
+		static int hf_baos_si_server_item_desc_str_len;
+		static int hf_baos_si_baudrate;
+		static int hf_baos_si_knx_address;
+		static int hf_baos_si_knx_address_area;
+		static int hf_baos_si_knx_address_line;
+		static int hf_baos_si_knx_address_device;*/
 	};
 
 	static int *ett[] = {
@@ -572,6 +827,8 @@ proto_register_baos(void)
 		&ett_ft12,
 		&ett_ft12_header,
 		&ett_baos_payload,
+		&ett_version,
+		&ett_address,
 		&ett_ft12_footer
 	};
 
