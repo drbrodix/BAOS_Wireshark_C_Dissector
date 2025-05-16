@@ -5,11 +5,12 @@
 #include <epan/packet.h>
 #include <epan/tvbuff-int.h>
 #include <epan/dissectors/packet-usb.h>
+#include <epan/tfs.h>
 
 #define FT12_START_BYTE 0x68
 #define FT12_END_BYTE 0x16
 #define BAOS_MAINSERVICE_CODE 0xF0
-#define BAOS_START_INDEX start_byte_index + 5
+#define BAOS_START_INDEX (start_byte_index + 5)
 
 enum SUBSERVICE_CODES
 {
@@ -88,6 +89,16 @@ enum SERVER_ITEMS
     INDIVIDUAL_ADDRESS          = 20
 };
 
+enum DP_COMMANDS
+{
+    NO_COMMAND                  = 0x00,
+    SET_NEW_VALUE               = 0x01,
+    SEND_VALUE_ON_BUS           = 0x02,
+    SET_NEW_VALUE_SEND_ON_BUS   = 0x03,
+    READ_NEW_VALUE_VIA_BUS      = 0x04,
+    CLEAR_DP_TRANSMISSION_STATE = 0x05
+};
+
 // Protocol declaration
 static int proto_baos;
 
@@ -122,6 +133,12 @@ static int hf_baos_si_knx_address;
 static int hf_baos_si_knx_address_area;
 static int hf_baos_si_knx_address_line;
 static int hf_baos_si_knx_address_device;
+static int hf_baos_start_dp_id;
+static int hf_baos_nr_of_dps;
+static int hf_baos_dp_id;
+static int hf_baos_dp_command;
+static int hf_baos_dp_length;
+static int hf_baos_dp_value;
 
 static const value_string vs_ft12_control_bytes[] = {
     {CR_TX_EVEN, "TX - Even"},
@@ -184,26 +201,37 @@ static const value_string vs_subservices[] = {
 // For now, only the server items are present, which are
 // supported in the own implementation of the BAOS protocol
 static const value_string vs_server_items[] = {
-    {1, "Hardware Type"},
-    {2, "Hardware version"},
-    {3, "Firmware version"},
-    {4, "KNX manufacturer code DEV"},
-    {5, "KNX manufacturer code APP"},
-    {6, "Application ID (ETS)"},
-    {7, "Application version (ETS)"},
-    {8, "Serial number"},
-    {9, "Time since reset [ms]"},
-    {10, "Bus connection state"},
-    {11, "Maximum buffer size"},
-    {12, "Length of description string"},
-    {13, "Baudrate"},
-    {14, "Current buffer size"},
-    {15, "Programming mode"},
-    {16, "Protocol Version (Binary)"},
-    {17, "Indication Sending"},
-    {18, "Protocol Version (WebService)"},
-    {19, "Protocol Version (RestService)"},
-    {20, "Individual Address"}
+    {HARDWARE_TYPE, "Hardware Type"},
+    {HARDWARE_VERSION, "Hardware version"},
+    {FIRMWARE_VERSION, "Firmware version"},
+    {KNX_MANUFACTURER_CODE_DEV, "KNX manufacturer code DEV"},
+    {KNX_MANUFACTURER_CODE_APP, "KNX manufacturer code APP"},
+    {APPLICATION_ID_ETS, "Application ID (ETS)"},
+    {APPLICATION_VERSION_ETS, "Application version (ETS)"},
+    {SERIAL_NUMBER, "Serial number"},
+    {TIME_SINCE_RESET, "Time since reset [ms]"},
+    {BUS_CONNECTION_STATE, "Bus connection state"},
+    {MAX_BUFFER_SIZE, "Maximum buffer size"},
+    {LENGTH_OF_DESC_STRING, "Length of description string"},
+    {BAUDRATE, "Baudrate"},
+    {CURRENT_BUFF_SIZE, "Current buffer size"},
+    {PROGRAMMING_MODE, "Programming mode"},
+    {PROTO_VERSION_BIN, "Protocol Version (Binary)"},
+    {INDICATION_SENDING, "Indication Sending"},
+    {PROTO_VERSION_WEBSERVICE, "Protocol Version (WebService)"},
+    {PROTO_VERSION_RESTSERVICE, "Protocol Version (RestService)"},
+    {INDIVIDUAL_ADDRESS, "Individual Address"}
+};
+
+// Refer to the BAOS documentation to
+// find out more about the available datapoint commands.
+static const value_string vs_dp_commands[] = {
+    {NO_COMMAND, "No command"},
+    {SET_NEW_VALUE, "Set new value"},
+    {SEND_VALUE_ON_BUS, "Send value on bus"},
+    {SET_NEW_VALUE_SEND_ON_BUS, "Set new value and send on bus"},
+    {READ_NEW_VALUE_VIA_BUS, "Read new value via bus"},
+    {CLEAR_DP_TRANSMISSION_STATE, "Clear datapoint transmission state"}
 };
 
 // ETT subtree declarations
