@@ -1,2 +1,2 @@
 A Wireshark dissector for Weinzierl Engineering GmbH's serial BAOS communication protocol written in C.
-The FT 1.2 frame carrying the BAOS payload is also part of the dissector.
+The dissection of the FT 1.2 frame carrying the BAOS payload is also part of the plugin.
