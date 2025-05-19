@@ -99,6 +99,39 @@ enum DP_COMMANDS
     CLEAR_DP_TRANSMISSION_STATE = 0x05
 };
 
+enum DP_FILTERS
+{
+    GET_ALL_DP_VALUES       = 0x00,
+    GET_VALID_DP_VALUES     = 0x01,
+    GET_UPDATED_DP_VALUES   = 0x02
+};
+
+enum DP_STATE_VALID_FLAGS
+{
+    OBJECT_VAL_UNKNOWN      = 0b0,
+    OBJECT_ALREADY_RECEIVED = 0b1
+};
+
+enum DP_STATE_UPDATE_FLAGS
+{
+    VALUE_NOT_UPDATED       = 0b0,
+    VALUE_UPDATED_FROM_BUS  = 0b1
+};
+
+enum DP_STATE_READ_REQ_FLAGS
+{
+    SEND_WRITE_REQ  = 0b0,
+    SEND_READ_REQ   = 0b1
+};
+
+enum DP_STATE_TRANSMISSION_STATES
+{
+    IDLE_OK             = 0b00,
+    IDLE_ERROR          = 0b01,
+    TRANS_IN_PROGRESS   = 0b10,
+    TRANS_REQUEST       = 0b11
+};
+
 // Protocol declaration
 static int proto_baos;
 
@@ -137,8 +170,31 @@ static int hf_baos_start_dp_id;
 static int hf_baos_nr_of_dps;
 static int hf_baos_dp_id;
 static int hf_baos_dp_command;
+static int hf_baos_dp_state;
+static int hf_baos_dp_state_valid;
+static int hf_baos_dp_state_update;
+static int hf_baos_dp_state_read_req;
+static int hf_baos_dp_state_trans;
 static int hf_baos_dp_length;
 static int hf_baos_dp_value;
+static int hf_baos_dp_filter;
+static int hf_baos_start_param_byte;
+static int hf_baos_nr_of_param_bytes;
+static int hf_baos_param_byte;
+static int hf_baos_start_desc_string;
+static int hf_baos_nr_of_desc_strings;
+static int hf_baos_desc_string_len;
+static int hf_baos_desc_string;
+
+// ETT subtree declarations
+static int ett_baos;
+static int ett_ft12;
+static int ett_ft12_header;
+static int ett_baos_payload;
+static int ett_version;
+static int ett_address;
+static int ett_dp_state;
+static int ett_ft12_footer;
 
 static const value_string vs_ft12_control_bytes[] = {
     {CR_TX_EVEN, "TX - Even"},
@@ -234,14 +290,33 @@ static const value_string vs_dp_commands[] = {
     {CLEAR_DP_TRANSMISSION_STATE, "Clear datapoint transmission state"}
 };
 
-// ETT subtree declarations
-static int ett_baos;
-static int ett_ft12;
-static int ett_ft12_header;
-static int ett_baos_payload;
-static int ett_version;
-static int ett_address;
-static int ett_ft12_footer;
+static const value_string vs_dp_filters[] = {
+    {GET_ALL_DP_VALUES, "Get all datapoint values"},
+    {GET_VALID_DP_VALUES, "Get only valid datapoint values"},
+    {GET_UPDATED_DP_VALUES, "Get only updated datapoint values"}
+};
+
+static const value_string vs_dp_state_valid_flags[] = {
+    {OBJECT_VAL_UNKNOWN, "Object value is unknown"},
+    {OBJECT_ALREADY_RECEIVED, "Object has already been received"}
+};
+
+static const value_string vs_dp_state_update_flags[] = {
+    {VALUE_NOT_UPDATED, "Value is not updated"},
+    {VALUE_UPDATED_FROM_BUS, "Value is updated from bus"}
+};
+
+static const value_string vs_dp_state_read_req_flags[] = {
+    {SEND_WRITE_REQ, "Write request should be sent"},
+    {SEND_READ_REQ, "Read request should be sent"}
+};
+
+static const value_string vs_dp_state_trans_states[] = {
+    {IDLE_OK, "Idle/OK"},
+    {IDLE_ERROR, "Idle/error"},
+    {TRANS_IN_PROGRESS, "Transmission in progress"},
+    {TRANS_REQUEST, "Transmission request"}
+};
 
 uint8_t
 check_serial_baos_pattern(tvbuff_t *tvb);

@@ -307,7 +307,7 @@ dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, 
 				}
 			}
 			server_item_id_offset += server_item_data_length + 3;
-			if(tvb->length < (uint16_t)(server_item_id_offset + server_item_data_length + 3))
+			if(tvb->length < (uint16_t)(server_item_id_offset + 2))
 				break;
 		}
 	}
@@ -340,21 +340,103 @@ dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const 
 	}
 }
 
-// void
-// dissect_get_datapoint_desc_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_get_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
+void
+dissect_get_datapoint_desc_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Add ID of the starting datapoint
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_dp_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of datapoints
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_dps,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
+
+void
+dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_desc_string,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_desc_strings,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
+
+void
+dissect_get_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Add ID of the starting datapoint
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_dp_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of datapoints
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_dps,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add datapoint filter code
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_dp_filter,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
+
 void
 dissect_set_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -448,21 +530,99 @@ dissect_set_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, ui
 								);
 		}
 		dp_id_offset += dp_length + 4;
-		if(tvb->length < (uint16_t)(dp_id_offset + dp_length + 4))
+		if(tvb->length < (uint16_t)(dp_id_offset + 2))
 			break;
 	}
 }
-//
-// void
-// dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_set_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
+
+void
+dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_param_byte,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_param_bytes,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
+
+void
+dissect_set_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Store nr of parameter bytes in var if it's in TVB's boundaries,
+	// or assign UINT16_MAX to var if TVB is not long enough
+	const uint16_t nr_of_param_bytes = (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT16_MAX;
+
+	uint16_t param_byte_offset = BAOS_START_INDEX + 6;
+
+	// Add index of the starting parameter byte
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_param_byte,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of parameter bytes
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_param_bytes,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Loop through all parameter bytes.
+	// If it's a flush command telegram where start byte index
+	// and nr of bytes are both 0x0000, the loop won't start
+	// due to the condition in loop header being false.
+	// This is optimal, since nothing else needs to be
+	// dissected in the payload.
+	for (uint16_t i = 0; i < nr_of_param_bytes; i++)
+	{
+
+		// Add parameter byte
+		if (tvb->length >= (uint16_t)(param_byte_offset + 1))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_param_byte,
+								tvb,
+								param_byte_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		param_byte_offset++;
+		if(tvb->length < (uint16_t)(param_byte_offset + 1))
+			break;
+	}
+}
+
 void
 dissect_set_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -503,36 +663,527 @@ dissect_set_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_
 							);
 	}
 }
-//
-// void
-// dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_get_desc_string_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_set_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_get_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
-//
-// void
-// dissect_set_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
-// {
-// }
+
+void
+dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Store nr of datapoints in var if it's in TVB's boundaries,
+	// or assign UINT16_MAX to var if TVB is not long enough
+	const uint16_t nr_of_dps = (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT16_MAX;
+
+	uint16_t dp_id_offset = BAOS_START_INDEX + 6;
+
+	// Add ID of the starting datapoint
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_dp_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of datapoints
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_dps,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add object server response if it's an error telegram
+	if (!nr_of_dps && tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_object_server_response,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Loop through all datapoints
+	for (uint16_t i = 0; i < nr_of_dps; i++)
+	{
+		// Setup variables for current server item iteration
+		uint16_t dp_state_offset	= dp_id_offset + 2;
+		uint16_t dp_length_offset	= dp_state_offset + 1;
+		uint16_t dp_value_offset	= dp_length_offset + 1;
+		uint8_t dp_length			= (tvb->length >= dp_length_offset) ?
+										tvb_get_uint8(tvb, dp_length_offset) : UINT8_MAX;
+
+		// Add datapoint ID
+		if (tvb->length >= (uint16_t)(dp_id_offset + 2))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_id,
+								tvb,
+								dp_id_offset,
+								2,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add datapoint state
+		if (tvb->length >= (uint16_t)(dp_state_offset + 1))
+		{
+			proto_item *state_ti = proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_state,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree *state_tree = proto_item_add_subtree(state_ti,ett_dp_state);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_valid,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_update,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_read_req,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_trans,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add datapoint length
+		if (tvb->length >= (uint16_t)(dp_length_offset + 1))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_length,
+								tvb,
+								dp_length_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add datapoint value
+		if (tvb->length >= (uint16_t)(dp_value_offset + dp_length))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_value,
+								tvb,
+								dp_value_offset,
+								dp_length,
+								ENC_BIG_ENDIAN
+								);
+		}
+		dp_id_offset += dp_length + 4;
+		if(tvb->length < (uint16_t)(dp_id_offset + 2))
+			break;
+	}
+}
+
+void
+dissect_get_desc_string_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Store nr of description strings in var if it's in TVB's boundaries,
+	// or assign UINT16_MAX to var if TVB is not long enough
+	const uint16_t nr_of_desc_strings = (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT16_MAX;
+
+	uint16_t desc_string_len_offset = BAOS_START_INDEX + 6;
+
+	// Add ID of start desc string
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_desc_string,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of desc strings
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_desc_strings,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add object server response if it's an error telegram
+	if (!nr_of_desc_strings && tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_object_server_response,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Loop through all desc strings
+	for (uint16_t i = 0; i < nr_of_desc_strings; i++)
+	{
+		uint16_t desc_string_offset = desc_string_len_offset + 2;
+
+		// Store description string length in var if it's in TVB's boundaries,
+		// or assign UINT16_MAX to var if TVB is not long enough
+		const uint16_t desc_string_len = (tvb->length >= (uint16_t)(desc_string_len_offset + 2)) ?
+											tvb_get_uint16(tvb, desc_string_len_offset, ENC_BIG_ENDIAN) : UINT16_MAX;
+		// Add desc string len
+		if (tvb->length >= (uint16_t)(desc_string_len_offset + 2))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_desc_string_len,
+								tvb,
+								desc_string_len_offset,
+								2,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add desc string
+		if (tvb->length >= (uint16_t)(desc_string_offset + desc_string_len))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_desc_string,
+								tvb,
+								desc_string_offset,
+								desc_string_len,
+								ENC_BIG_ENDIAN
+								);
+		}
+		desc_string_len_offset += desc_string_len + 2;
+		if(tvb->length < (uint16_t)(desc_string_len_offset + 2))
+			break;
+	}
+}
+
+void
+dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Store nr of datapoints in var if it's in TVB's boundaries,
+	// or assign UINT16_MAX to var if TVB is not long enough
+	const uint16_t nr_of_dps = (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT16_MAX;
+
+	uint16_t dp_id_offset = BAOS_START_INDEX + 6;
+
+	// Add ID of the starting datapoint
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_dp_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of datapoints
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_dps,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add object server response if it's an error telegram
+	if (!nr_of_dps && tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_object_server_response,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Loop through all datapoints
+	for (uint16_t i = 0; i < nr_of_dps; i++)
+	{
+		// Setup variables for current server item iteration
+		uint16_t dp_state_offset	= dp_id_offset + 2;
+		uint16_t dp_length_offset	= dp_state_offset + 1;
+		uint16_t dp_value_offset	= dp_length_offset + 1;
+		uint8_t dp_length			= (tvb->length >= dp_length_offset) ?
+										tvb_get_uint8(tvb, dp_length_offset) : UINT8_MAX;
+
+		// Add datapoint ID
+		if (tvb->length >= (uint16_t)(dp_id_offset + 2))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_id,
+								tvb,
+								dp_id_offset,
+								2,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add datapoint state
+		if (tvb->length >= (uint16_t)(dp_state_offset + 1))
+		{
+			proto_item *state_ti = proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_state,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree *state_tree = proto_item_add_subtree(state_ti,ett_dp_state);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_valid,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_update,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_read_req,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								state_tree,
+								hf_baos_dp_state_trans,
+								tvb,
+								dp_state_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add datapoint length
+		if (tvb->length >= (uint16_t)(dp_length_offset + 1))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_length,
+								tvb,
+								dp_length_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		// Add datapoint value
+		if (tvb->length >= (uint16_t)(dp_value_offset + dp_length))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_dp_value,
+								tvb,
+								dp_value_offset,
+								dp_length,
+								ENC_BIG_ENDIAN
+								);
+		}
+		dp_id_offset += dp_length + 4;
+		if(tvb->length < (uint16_t)(dp_id_offset + 2))
+			break;
+	}
+}
+
+void
+dissect_set_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Add ID of the starting datapoint
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_dp_id,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of datapoints
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_dps,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Object server response (Notification about success or error)
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_object_server_response,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
+
+void
+dissect_get_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Store nr of parameter bytes in var if it's in TVB's boundaries,
+	// or assign UINT16_MAX to var if TVB is not long enough
+	const uint16_t nr_of_param_bytes = (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6)) ?
+										tvb_get_uint16(tvb, BAOS_START_INDEX + 4, ENC_BIG_ENDIAN) : UINT16_MAX;
+
+	uint16_t param_byte_offset = BAOS_START_INDEX + 6;
+
+	// Add index of the starting parameter byte
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_param_byte,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of parameter bytes
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_param_bytes,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add object server response if it's an error telegram
+	if (!nr_of_param_bytes && tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_object_server_response,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Loop through all parameter bytes
+	for (uint16_t i = 0; i < nr_of_param_bytes; i++)
+	{
+
+		// Add parameter byte
+		if (tvb->length >= (uint16_t)(param_byte_offset + 1))
+		{
+			proto_tree_add_item(
+								baos_payload_tree,
+								hf_baos_param_byte,
+								tvb,
+								param_byte_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+		param_byte_offset++;
+		if(tvb->length < (uint16_t)(param_byte_offset + 1))
+			break;
+	}
+}
+
+void
+dissect_set_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
+{
+	// Add index of the starting parameter byte
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_start_param_byte,
+							tvb,
+							BAOS_START_INDEX + 2,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Add number of parameter bytes
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_nr_of_param_bytes,
+							tvb,
+							BAOS_START_INDEX + 4,
+							2,
+							ENC_BIG_ENDIAN
+							);
+	}
+	// Object server response (Notification about success or error)
+	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 7))
+	{
+		proto_tree_add_item(
+							baos_payload_tree,
+							hf_baos_object_server_response,
+							tvb,
+							BAOS_START_INDEX + 6,
+							1,
+							ENC_BIG_ENDIAN
+							);
+	}
+}
 
 static bool
 dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
@@ -667,22 +1318,22 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			dissect_long_server_item_telegram(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_DESC_REQ_CODE:
-			// dissect_get_datapoint_desc_req(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_datapoint_desc_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DESC_STRING_REQ_CODE:
-			// dissect_get_desc_string_req(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_desc_string_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_VALUE_REQ_CODE:
-			// dissect_get_datapoint_value_req(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_datapoint_value_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_DATAPOINT_VALUE_REQ_CODE:
 			dissect_set_datapoint_value_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_PARAMETER_BYTE_REQ_CODE:
-			// dissect_get_parameter_byte_req(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_parameter_byte_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_PARAMETER_BYTE_REQ_CODE:
-			// dissect_set_parameter_byte_req(tvb, baos_payload_tree, start_byte_index);
+			dissect_set_parameter_byte_req(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_SERVER_ITEM_RES_CODE:
 			dissect_long_server_item_telegram(tvb, baos_payload_tree, start_byte_index);
@@ -691,22 +1342,22 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			dissect_set_server_item_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_DESC_RES_CODE:
-			// dissect_get_datapoint_desc_res(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_datapoint_desc_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DESC_STRING_RES_CODE:
-			// dissect_get_desc_string_res(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_desc_string_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_DATAPOINT_VALUE_RES_CODE:
-			// dissect_get_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_DATAPOINT_VALUE_RES_CODE:
-			// dissect_set_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
+			dissect_set_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case GET_PARAMETER_BYTE_RES_CODE:
-			// dissect_get_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
+			dissect_get_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SET_PARAMETER_BYTE_RES_CODE:
-			// dissect_set_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
+			dissect_set_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case DATAPOINT_VALUE_IND_CODE:
 			break;
@@ -989,6 +1640,46 @@ proto_register_baos(void)
 					NULL, HFILL}
 		},
 		{
+			&hf_baos_dp_state,
+			{"Datapoint state",
+					"baos.dp_state",
+					FT_UINT8, BASE_HEX,
+					NULL, 0xFF,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_state_valid,
+			{"Valid flag",
+					"baos.dp_state.valid",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_state_valid_flags), 0b0001'0000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_state_update,
+			{"Update flag",
+					"baos.dp_state.update",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_state_update_flags), 0b0000'1000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_state_read_req,
+			{"Read request flag",
+					"baos.dp_state.read_req",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_state_read_req_flags), 0b0000'0100,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_state_trans,
+			{"Transmission flag",
+					"baos.dp_state.trans",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_state_trans_states), 0b0000'0011,
+					NULL, HFILL}
+		},
+		{
 			&hf_baos_dp_length,
 			{"Datapoint length",
 					"baos.dp_length",
@@ -1003,6 +1694,70 @@ proto_register_baos(void)
 					FT_BYTES, SEP_SPACE,
 					NULL, 0x0,
 					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_filter,
+			{"Datapoint filter",
+					"baos.dp_filter",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_filters), 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_start_param_byte,
+			{"Start byte index",
+					"baos.start_param_byte",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_nr_of_param_bytes,
+			{"Number of bytes",
+					"baos.nr_of_param_bytes",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_param_byte,
+			{"Parameter byte",
+					"baos.param_byte",
+					FT_UINT8, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_start_desc_string,
+			{"ID of start description string",
+					"baos.start_desc_string",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_nr_of_desc_strings,
+			{"Number of description strings",
+					"baos.nr_of_desc_strings",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_desc_string_len,
+			{"Description string length",
+					"baos.desc_string_len",
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_desc_string,
+			{"Description string",
+					"baos.desc_string",
+					FT_STRING, BASE_STR_WSP,
+					NULL, 0x0,
+					NULL, HFILL}
 		}
 	};
 
@@ -1013,6 +1768,7 @@ proto_register_baos(void)
 		&ett_baos_payload,
 		&ett_version,
 		&ett_address,
+		&ett_dp_state,
 		&ett_ft12_footer
 	};
 
