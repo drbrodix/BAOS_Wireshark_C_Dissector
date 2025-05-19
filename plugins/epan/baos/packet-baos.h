@@ -1,11 +1,9 @@
 #ifndef PACKET_BAOS_H
 #define PACKET_BAOS_H
 
-#include "config.h"
 #include <epan/packet.h>
-#include <epan/tvbuff-int.h>
 #include <epan/dissectors/packet-usb.h>
-#include <epan/tfs.h>
+#include <epan/tvbuff-int.h>
 
 #define FT12_START_BYTE 0x68
 #define FT12_END_BYTE 0x16
@@ -89,6 +87,56 @@ enum SERVER_ITEMS
     INDIVIDUAL_ADDRESS          = 20
 };
 
+// Refer to Appendix D in the BAOS documentation to
+// find out more about the available datapoint types.
+enum BAOS_DPTS
+{
+     DPT1 = 0x01,
+     DPT2 = 0x02,
+     DPT3 = 0x03,
+     DPT4 = 0x04,
+     DPT5 = 0x05,
+     DPT6 = 0x06,
+     DPT7 = 0x07,
+     DPT8 = 0x08,
+     DPT9 = 0x09,
+     DPT10 = 0x0A,
+     DPT11 = 0x0B,
+     DPT12 = 0x0C,
+     DPT13 = 0x0D,
+     DPT14 = 0x0E,
+     DPT15 = 0x0F,
+     DPT16 = 0x10,
+     DPT17 = 0x11,
+     DPT18 = 0x12,
+     DPT19  = 0x13,
+     DPT20  = 0x20,
+     DPT232 = 0x21,
+     DPT251 = 0x22,
+     UNKNOWN_DPT = 0xFF
+};
+
+// Refer to Appendix C in the BAOS documentation
+// to find out more about the available datapoint value types.
+enum BAOS_DP_VALUE_TYPES
+{
+    DP_VT_1BIT = 0x00,
+    DP_VT_2BIT = 0x01,
+    DP_VT_3BIT = 0x02,
+    DP_VT_4BIT = 0x03,
+    DP_VT_5BIT = 0x04,
+    DP_VT_6BIT = 0x05,
+    DP_VT_7BIT = 0x06,
+    DP_VT_1BYTE = 0x07,
+    DP_VT_2BYTE = 0x08,
+    DP_VT_3BYTE = 0x09,
+    DP_VT_4BYTE = 0x0A,
+    DP_VT_6BYTE = 0x0B,
+    DP_VT_8BYTE = 0x0C,
+    DP_VT_10BYTE = 0x0D,
+    DP_VT_14BYTE = 0x0E
+};
+
 enum DP_COMMANDS
 {
     NO_COMMAND                  = 0x00,
@@ -130,6 +178,14 @@ enum DP_STATE_TRANSMISSION_STATES
     IDLE_ERROR          = 0b01,
     TRANS_IN_PROGRESS   = 0b10,
     TRANS_REQUEST       = 0b11
+};
+
+enum DP_CONFIG_FLAGS_TRANS_PRIOS
+{
+    SYSTEM_PRIO = 0b00,
+    HIGH_PRIO   = 0b01,
+    ALARM_PRIO  = 0b10,
+    LOW_PRIO    = 0b11
 };
 
 // Protocol declaration
@@ -175,6 +231,16 @@ static int hf_baos_dp_state_valid;
 static int hf_baos_dp_state_update;
 static int hf_baos_dp_state_read_req;
 static int hf_baos_dp_state_trans;
+static int hf_baos_dp_value_type;
+static int hf_baos_dp_config_flags;
+static int hf_baos_dp_config_trans_prio;
+static int hf_baos_dp_config_dp_comm;
+static int hf_baos_dp_config_read_from_bus;
+static int hf_baos_dp_config_write_from_bus;
+static int hf_baos_dp_config_read_on_init;
+static int hf_baos_dp_config_trans_to_bus;
+static int hf_baos_dp_config_update_on_res;
+static int hf_baos_dp_dpt;
 static int hf_baos_dp_length;
 static int hf_baos_dp_value;
 static int hf_baos_dp_filter;
@@ -194,6 +260,7 @@ static int ett_baos_payload;
 static int ett_version;
 static int ett_address;
 static int ett_dp_state;
+static int ett_dp_config_flags;
 static int ett_ft12_footer;
 
 static const value_string vs_ft12_control_bytes[] = {
@@ -222,6 +289,62 @@ static const value_string vs_baudrate[] = {
     {BAUD_UNKNOWN, "Unknown Baudrate"},
     {BAUD_19200, "19200"},
     {BAUD_115200, "115200"}
+};
+
+static const value_string vs_baos_dpts[] = {
+    {DPT1, "DPT 1 (1 Bit, Boolean)"},
+    {DPT2, "DPT 2 (2 Bit, Control)"},
+    {DPT3, "DPT 3 (4 Bit, Dimming, Blinds)"},
+    {DPT4, "DPT 4 (8 Bit, Character Set)"},
+    {DPT5, "DPT 5 (8 Bit, Unsigned Value)"},
+    {DPT6, "DPT 6 (8 Bit, Signed Value)"},
+    {DPT7, "DPT 7 (2 Byte, Unsigned Value)"},
+    {DPT8, "DPT 8 (2 Byte, Signed Value)"},
+    {DPT9, "DPT 9 (2 Byte, Float Value)"},
+    {DPT10, "DPT 10 (3 Byte, Time)"},
+    {DPT11, "DPT 11 (3 Byte, Date)"},
+    {DPT12, "DPT 12 (4 Byte, Unsigned Value)"},
+    {DPT13, "DPT 13 (4 Byte, Signed Value)"},
+    {DPT14, "DPT 14 (4 Byte, Float Value)"},
+    {DPT15, "DPT 15 (4 Byte, Access)"},
+    {DPT16, "DPT 16 (14 Byte, String)"},
+    {DPT17, "DPT 17 (1 Byte, Scene Number)"},
+    {DPT18, "DPT 18 (1 Byte, Scene Control)"},
+    {DPT19, "DPT 19 (8 Byte, Date Time)"},
+    {DPT20, "DPT 20 (1 Byte, HVAC Mode)"},
+    {DPT232, "DPT 232 (3 Byte, Color RGB)"},
+    {DPT251, "DPT 251 (6 Byte, Color RGBW)"},
+    {UNKNOWN_DPT, "Unknown DPT"}
+};
+
+static const value_string vs_baos_dp_value_types[] = {
+    {DP_VT_1BIT, "1 Bit"},
+    {DP_VT_2BIT, "2 Bits"},
+    {DP_VT_3BIT, "3 Bits"},
+    {DP_VT_4BIT, "4 Bits"},
+    {DP_VT_5BIT, "5 Bits"},
+    {DP_VT_6BIT, "6 Bits"},
+    {DP_VT_7BIT, "7 Bits"},
+    {DP_VT_1BYTE, "1 Byte"},
+    {DP_VT_2BYTE, "2 Bytes"},
+    {DP_VT_3BYTE, "3 Bytes"},
+    {DP_VT_4BYTE, "4 Bytes"},
+    {DP_VT_6BYTE, "6 Bytes"},
+    {DP_VT_8BYTE, "8 Bytes"},
+    {DP_VT_10BYTE, "10 Bytes"},
+    {DP_VT_14BYTE, "14 Bytes"}
+};
+
+static const value_string vs_dp_config_flags_tf[] = {
+    {false, "Disabled"},
+    {true, "Enabled"},
+};
+
+static const value_string vs_dp_config_flags_trans_prios[] = {
+    {SYSTEM_PRIO, "System priority"},
+    {HIGH_PRIO, "High priority"},
+    {ALARM_PRIO, "Alarm priority"},
+    {LOW_PRIO, "Low priority"}
 };
 
 static const true_false_string vs_server_item_status = {

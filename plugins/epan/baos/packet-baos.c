@@ -4,9 +4,6 @@
  */
 
 #include "packet-baos.h"
-// #include <epan/tfs.h>
-// #include <epan/llcsaps.h>
-// #include "packet-bacnet.h"
 
 uint8_t
 check_serial_baos_pattern(tvbuff_t *tvb)
@@ -714,11 +711,9 @@ dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	for (uint16_t i = 0; i < nr_of_dps; i++)
 	{
 		// Setup variables for current server item iteration
-		uint16_t dp_state_offset	= dp_id_offset + 2;
-		uint16_t dp_length_offset	= dp_state_offset + 1;
-		uint16_t dp_value_offset	= dp_length_offset + 1;
-		uint8_t dp_length			= (tvb->length >= dp_length_offset) ?
-										tvb_get_uint8(tvb, dp_length_offset) : UINT8_MAX;
+		uint16_t dp_value_type_offset	= dp_id_offset + 2;
+		uint16_t dp_config_flags_offset	= dp_value_type_offset + 1;
+		uint16_t dp_dpt_offset			= dp_config_flags_offset + 1;
 
 		// Add datapoint ID
 		if (tvb->length >= (uint16_t)(dp_id_offset + 2))
@@ -732,76 +727,100 @@ dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 								ENC_BIG_ENDIAN
 								);
 		}
-		// Add datapoint state
-		if (tvb->length >= (uint16_t)(dp_state_offset + 1))
+		// Add datapoint value type
+		if (tvb->length >= (uint16_t)(dp_id_offset + 2))
 		{
-			proto_item *state_ti = proto_tree_add_item(
+			proto_tree_add_item(
 								baos_payload_tree,
-								hf_baos_dp_state,
+								hf_baos_dp_value_type,
 								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree *state_tree = proto_item_add_subtree(state_ti,ett_dp_state);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_valid,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_update,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_read_req,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_trans,
-								tvb,
-								dp_state_offset,
+								dp_value_type_offset,
 								1,
 								ENC_BIG_ENDIAN
 								);
 		}
-		// Add datapoint length
-		if (tvb->length >= (uint16_t)(dp_length_offset + 1))
+		// Add datapoint config flags
+		if (tvb->length >= (uint16_t)(dp_config_flags_offset + 1))
 		{
+			proto_item *config_flags_ti = proto_tree_add_item(
+															baos_payload_tree,
+															hf_baos_dp_config_flags,
+															tvb,
+															dp_config_flags_offset,
+															1,
+															ENC_BIG_ENDIAN
+															);
+			proto_tree *config_flags_tree = proto_item_add_subtree(config_flags_ti,ett_dp_config_flags);
 			proto_tree_add_item(
-								baos_payload_tree,
-								hf_baos_dp_length,
+								config_flags_tree,
+								hf_baos_dp_config_trans_prio,
 								tvb,
-								dp_length_offset,
+								dp_config_flags_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								config_flags_tree,
+								hf_baos_dp_config_dp_comm,
+								tvb,
+								dp_config_flags_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								config_flags_tree,
+								hf_baos_dp_config_read_from_bus,
+								tvb,
+								dp_config_flags_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								config_flags_tree,
+								hf_baos_dp_config_write_from_bus,
+								tvb,
+								dp_config_flags_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								config_flags_tree,
+								hf_baos_dp_config_read_on_init,
+								tvb,
+								dp_config_flags_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								config_flags_tree,
+								hf_baos_dp_config_trans_to_bus,
+								tvb,
+								dp_config_flags_offset,
+								1,
+								ENC_BIG_ENDIAN
+								);
+			proto_tree_add_item(
+								config_flags_tree,
+								hf_baos_dp_config_update_on_res,
+								tvb,
+								dp_config_flags_offset,
 								1,
 								ENC_BIG_ENDIAN
 								);
 		}
-		// Add datapoint value
-		if (tvb->length >= (uint16_t)(dp_value_offset + dp_length))
+		// Add datapoint type
+		if (tvb->length >= (uint16_t)(dp_dpt_offset + 1))
 		{
 			proto_tree_add_item(
 								baos_payload_tree,
-								hf_baos_dp_value,
+								hf_baos_dp_dpt,
 								tvb,
-								dp_value_offset,
-								dp_length,
+								dp_dpt_offset,
+								1,
 								ENC_BIG_ENDIAN
 								);
 		}
-		dp_id_offset += dp_length + 4;
+		dp_id_offset += 5;
 		if(tvb->length < (uint16_t)(dp_id_offset + 2))
 			break;
 	}
@@ -1360,8 +1379,10 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			dissect_set_parameter_byte_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case DATAPOINT_VALUE_IND_CODE:
+			dissect_get_datapoint_value_res(tvb, baos_payload_tree, start_byte_index);
 			break;
 		case SERVER_ITEM_IND_CODE:
+			dissect_long_server_item_telegram(tvb, baos_payload_tree, start_byte_index);
 			break;
 		default:
 			break;
@@ -1701,6 +1722,86 @@ proto_register_baos(void)
 					"baos.dp_filter",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_filters), 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_value_type,
+			{"Datapoint value type",
+					"baos.dp_value_type",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_baos_dp_value_types), 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_flags,
+			{"Datapoint config flags",
+					"baos.dp_config",
+					FT_UINT8, BASE_HEX,
+					NULL, 0xFF,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_trans_prio,
+			{"Valid flag",
+					"baos.dp_config.trans_prio",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_trans_prios), 0b0000'0011,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_dp_comm,
+			{"Update flag",
+					"baos.dp_config.dp_comm",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_tf), 0b0000'0100,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_read_from_bus,
+			{"Read request flag",
+					"baos.dp_config.read_from_bus",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_tf), 0b0000'1000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_write_from_bus,
+			{"Transmission flag",
+					"baos.dp_config.write_from_bus",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_tf), 0b0001'0000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_read_on_init,
+			{"Update flag",
+					"baos.dp_config.read_on_init",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_tf), 0b0010'0000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_trans_to_bus,
+			{"Read request flag",
+					"baos.dp_config.trans_to_bus",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_tf), 0b0100'0000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_config_update_on_res,
+			{"Transmission flag",
+					"baos.dp_config.trans_to_bus",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_dp_config_flags_tf), 0b1000'0000,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_dp_dpt,
+			{"Datapoint DPT",
+					"baos.dp_dpt",
+					FT_UINT8, BASE_HEX,
+					VALS(vs_baos_dpts), 0x0,
 					NULL, HFILL}
 		},
 		{
