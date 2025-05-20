@@ -1,11 +1,26 @@
+/* packet-baos.h
+ *
+ * Dissector for the BAOS protocol
+ * By Adam Rigely <adamrigely@pm.me>
+ *
+ * Wireshark - Network traffic analyzer
+ * By Gerald Combs <gerald@wireshark.org>
+ * Copyright 1998 Gerald Combs
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ */
+
 #ifndef PACKET_BAOS_H
 #define PACKET_BAOS_H
 
+// Imports
 #include <epan/packet.h>
 #include <epan/dissectors/packet-usb.h>
 #include <epan/tvbuff-int.h>
 #include <epan/expert.h>
 
+// Macros for readability
 #define FT12_START_BYTE 0x68
 #define FT12_END_BYTE 0x16
 #define BAOS_MAINSERVICE_CODE 0xF0
@@ -93,6 +108,8 @@ static int ett_address;
 static int ett_dp_state;
 static int ett_dp_config_flags;
 
+// Refer to the BAOS documentation to
+// find out more about the available subservices.
 enum SUBSERVICE_CODES
 {
     GET_SERVER_ITEM_REQ_CODE        = 0x01,
@@ -115,6 +132,8 @@ enum SUBSERVICE_CODES
     SERVER_ITEM_IND_CODE            = 0xC2
 };
 
+// Refer to Appendix B in the BAOS documentation
+// to find out more about the available error codes.
 enum OBJECT_SERVER_RESPONSE_CODES
 {
     SUCCESS                 = 0x00,
@@ -146,6 +165,10 @@ enum BAUDRATES
     BAUD_115200 = 0x02
 };
 
+// Refer to Appendix A in the BAOS documentation to
+// find out more about the available server items.
+// For now, only the server items are present, which are
+// supported in the own implementation of the BAOS protocol
 enum SERVER_ITEMS
 {
     HARDWARE_TYPE               = 1,
@@ -278,6 +301,8 @@ static const value_string vs_ft12_control_bytes[] = {
     {CR_RX_ODD, "RX - Odd"}
 };
 
+// Refer to Appendix B in the BAOS documentation
+// to find out more about the available error codes.
 static const value_string vs_object_server_response[] = {
     {SUCCESS, "Success"},
     {INTERNAL_ERROR, "Internal error"},
@@ -299,6 +324,8 @@ static const value_string vs_baudrate[] = {
     {BAUD_115200, "115200"}
 };
 
+// Refer to Appendix D in the BAOS documentation to
+// find out more about the available datapoint types.
 static const value_string vs_baos_dpts[] = {
     {DPT1, "DPT 1 (1 Bit, Boolean)"},
     {DPT2, "DPT 2 (2 Bit, Control)"},
@@ -325,6 +352,8 @@ static const value_string vs_baos_dpts[] = {
     {UNKNOWN_DPT, "Unknown DPT"}
 };
 
+// Refer to Appendix C in the BAOS documentation
+// to find out more about the available datapoint value types.
 static const value_string vs_baos_dp_value_types[] = {
     {DP_VT_1BIT, "1 Bit"},
     {DP_VT_2BIT, "2 Bits"},
@@ -449,6 +478,7 @@ static const value_string vs_dp_state_trans_states[] = {
     {TRANS_REQUEST, "Transmission request"}
 };
 
+// Function prototypes
 uint8_t
 check_serial_baos_pattern(tvbuff_t *tvb);
 

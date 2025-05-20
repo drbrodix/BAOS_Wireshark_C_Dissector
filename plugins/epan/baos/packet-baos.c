@@ -1,10 +1,19 @@
 /* packet-baos.c
  *
  * Dissector for the BAOS protocol
+ * By Adam Rigely <adamrigely@pm.me>
+ *
+ * Wireshark - Network traffic analyzer
+ * By Gerald Combs <gerald@wireshark.org>
+ * Copyright 1998 Gerald Combs
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
  */
 
 #include "packet-baos.h"
 
+//
 uint8_t
 check_serial_baos_pattern(tvbuff_t *tvb)
 {
@@ -1458,7 +1467,7 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 							ENC_BIG_ENDIAN,
 							&ft12_checksum
 							);
-		
+
 		// Add ExpertInfo if found checksum doesn't match
 		// calculated expected checksum
 		if (ft12_checksum != calculated_checksum)
@@ -2006,9 +2015,10 @@ proto_register_baos(void)
 										"baos" /* filter name */
 										);
 
+	expert_module_t *expert_baos = expert_register_protocol(proto_baos);
+
 	proto_register_field_array(proto_baos, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
-	expert_module_t *expert_baos = expert_register_protocol(proto_baos);
 	expert_register_field_array(expert_baos, ei, array_length(ei));
 }
 
