@@ -13,7 +13,9 @@
 
 #include "packet-baos.h"
 
-//
+// Looks for FT 1.2 + BAOS payload pattern.
+// Returns either the index of the FT 1.2 start byte,
+// or UINT8_MAX if pattern has not been found.
 uint8_t
 check_serial_baos_pattern(tvbuff_t *tvb)
 {
@@ -57,6 +59,9 @@ check_serial_baos_pattern(tvbuff_t *tvb)
 	return UINT8_MAX;
 }
 
+// Checks if FT 1.2 frame is complete by looking
+// for the FT 1.2 endbyte at the expected index.
+// Returns true if endbyte has been found, false otherwise.
 bool
 check_packet_integrity(tvbuff_t *tvb, uint8_t trailer_start_index)
 {
@@ -70,6 +75,9 @@ check_packet_integrity(tvbuff_t *tvb, uint8_t trailer_start_index)
 	return (ft12_endbyte == FT12_END_BYTE);
 }
 
+// Calculates the checksum of the FT 1.2 frame based
+// on algorithm documented in the BAOS documentation.
+// Returns the calculated checksum.
 uint32_t
 calculateChecksum(tvbuff_t *tvb, uint8_t start_byte_index, uint8_t trailer_start_index)
 {
@@ -84,6 +92,7 @@ calculateChecksum(tvbuff_t *tvb, uint8_t start_byte_index, uint8_t trailer_start
 	return sum_of_bytes % 256;
 }
 
+// Dissects SetServerItemReq, GetServerItemRes and ServerItemInd telegrams
 void
 dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
 {
@@ -346,6 +355,7 @@ dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, 
 	}
 }
 
+// Dissects GetServerItemReq telegrams
 void
 dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
 {
@@ -373,6 +383,7 @@ dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, const 
 	}
 }
 
+// Dissects GetDatapointDescriptionReq telegrams
 void
 dissect_get_datapoint_desc_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -402,9 +413,11 @@ dissect_get_datapoint_desc_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	}
 }
 
+// Dissects GetDescriptionStringReq telegrams
 void
 dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
+	// Add index of the starting description string
 	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
 	{
 		proto_tree_add_item(
@@ -416,6 +429,7 @@ dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_
 							ENC_BIG_ENDIAN
 							);
 	}
+	// Add number of description strings
 	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
 	{
 		proto_tree_add_item(
@@ -429,6 +443,7 @@ dissect_get_desc_string_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_
 	}
 }
 
+// Dissects GetDatapointValueReq telegrams
 void
 dissect_get_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -470,6 +485,7 @@ dissect_get_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, ui
 	}
 }
 
+// Dissects SetDatapointValueReq telegrams
 void
 dissect_set_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -568,9 +584,11 @@ dissect_set_datapoint_value_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, ui
 	}
 }
 
+// Dissects GetParameterByteReq telegrams
 void
 dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
+	// Add index of the starting parameter byte
 	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 4))
 	{
 		proto_tree_add_item(
@@ -582,6 +600,7 @@ dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 							ENC_BIG_ENDIAN
 							);
 	}
+	// Add number of parameter bytes
 	if (tvb->length >= (uint16_t)(BAOS_START_INDEX + 6))
 	{
 		proto_tree_add_item(
@@ -595,6 +614,7 @@ dissect_get_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	}
 }
 
+// Dissects SetParameterByteReq telegrams
 void
 dissect_set_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -656,6 +676,7 @@ dissect_set_parameter_byte_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	}
 }
 
+// Dissects SetServerItemRes telegrams
 void
 dissect_set_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -697,6 +718,7 @@ dissect_set_server_item_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_
 	}
 }
 
+// Dissects GetDatapointDescriptionRes telegrams
 void
 dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -862,6 +884,7 @@ dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	}
 }
 
+// Dissects GetDescriptionStringRes telegrams
 void
 dissect_get_desc_string_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -947,6 +970,7 @@ dissect_get_desc_string_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_
 	}
 }
 
+// Dissects GetDatapointValueRes telegrams
 void
 dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -1090,6 +1114,7 @@ dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, ui
 	}
 }
 
+// Dissects SetDatapointValueRes telegrams
 void
 dissect_set_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -1131,6 +1156,7 @@ dissect_set_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, ui
 	}
 }
 
+// Dissects GetParameterByteRes telegrams
 void
 dissect_get_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -1199,6 +1225,7 @@ dissect_get_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	}
 }
 
+// Dissects SetParameterByteRes telegrams
 void
 dissect_set_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index)
 {
@@ -1240,6 +1267,7 @@ dissect_set_parameter_byte_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 	}
 }
 
+// Main function of the dissector
 static bool
 dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
@@ -1248,16 +1276,25 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 	if (tvb->length < 10)
 		return false;
 
+	// Store index of the FT 1.2 start byte in var if FT 1.2 + BAOS pattern found,
+	// or store UINT8_MAX in var if pattern has not been found.
 	const uint8_t start_byte_index = check_serial_baos_pattern(tvb);
 
-	// startByteIndex has either the index of the FT 1.2 start byte in the tvb
-	// or UINT8_MAX if the FT 1.2 - BAOS pattern has not been found
+	// Returns false and ends dissection routine
+	// if FT 1.2 + BAOS pattern has not been found
 	if (start_byte_index == UINT8_MAX)
 		return false;
 
-	// Checksum byte needs to be subtracted
+	//
+	// From here onwards we can assume that
+	// a serial BAOS telegram has been found
+	//
+
+	// Stores length of the BAOS payload in var.
+	// Checksum byte needs to be subtracted.
 	const uint8_t baos_payload_len = tvb_get_uint8(tvb, start_byte_index + 1) - 1;
 
+	// Label handled telegrams as "BAOS Telegram"
 	col_set_str(pinfo->cinfo, COL_INFO, "BAOS Telegram");
 
 	// Base BAOS tree
@@ -1346,7 +1383,7 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 													);
 	proto_tree *baos_payload_tree = proto_item_add_subtree(baos_payload_ti, ett_baos_payload);
 
-	// Add BAOS payload data
+	// Add common BAOS payload data
 	proto_tree_add_item(
 						baos_payload_tree,
 						hf_baos_baos_mainservice,
@@ -1364,9 +1401,15 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 						ENC_BIG_ENDIAN
 						);
 
+	//
 	// From here onwards, the dissection depends on the subservice
+	//
+
+	// Store BAOS subservice code in var
 	const uint8_t baos_subservice_code = tvb_get_uint8(tvb, BAOS_START_INDEX + 1);
 
+	// Call dissector function of the corresponding
+	// subservice based on the found subservice code
 	switch (baos_subservice_code)
 	{
 		case GET_SERVER_ITEM_REQ_CODE:
@@ -1427,9 +1470,14 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			break;
 	}
 
+	//
 	// Dissection of the FT 1.2 trailer
+	//
 
+	// Calculate and store index of the start of the FT 1.2 trailer
 	const uint8_t trailer_start_index = start_byte_index + 5 + baos_payload_len;
+
+	// Check if FT 1.2 frame is complete and store result in var
 	const bool is_frame_complete = check_packet_integrity(tvb, trailer_start_index);
 
 	// Add ExpertInfo if FT 1.2 endbyte not found,
@@ -1439,6 +1487,8 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 		expert_add_info(pinfo, ft12_ti, &ei_ft12_incomplete_frame);
 	}
 
+	// Build FT 1.2 trailer subtree if at least
+	// first byte of the trailer is in TVB
 	if (tvb->length >= (uint16_t)(trailer_start_index + 1))
 	{
 		// FT 1.2 trailer subtree
@@ -1452,12 +1502,13 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 														);
 		proto_tree *ft12_trailer_tree = proto_item_add_subtree(ft12_trailer_ti, ett_ft12_trailer);
 
-		// No ...ret_uint8 function available,
-		// so I'll just use a 4byte int
+		// Define var for checksum found in telegram
 		uint32_t ft12_checksum = 0;
+		// Store calculated checksum of the packet
 		const uint32_t calculated_checksum = calculateChecksum(tvb, start_byte_index, trailer_start_index);
 
-		// Add FT 1.2 checksum
+		// Add FT 1.2 checksum to tree structure
+		// and store the value in "ft12_checksum"
 		proto_tree_add_item_ret_uint(
 							ft12_trailer_tree,
 							hf_baos_ft12_checksum,
@@ -1491,9 +1542,11 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 	return true;
 }
 
+// Function to register protocol, HeaderFields, subtree ETTs, ExpertItems
 void
 proto_register_baos(void)
 {
+	// HeaderField definitions
 	static hf_register_info hf[] = {
 		{
 			&hf_baos_ft12,
@@ -1984,6 +2037,7 @@ proto_register_baos(void)
 		}
 	};
 
+	// ExpertItem definitions
 	static ei_register_info ei[] = {
 		{
 			&ei_ft12_incomplete_frame,
@@ -1997,6 +2051,7 @@ proto_register_baos(void)
 		}
 	};
 
+	// Subtree ETT definitions
 	static int *ett[] = {
 		&ett_baos,
 		&ett_ft12,
@@ -2009,19 +2064,23 @@ proto_register_baos(void)
 		&ett_dp_config_flags
 	};
 
+	// Register protocol
 	proto_baos = proto_register_protocol(
 										"BAOS", /* name */
 										"BAOS", /* short name */
 										"baos" /* filter name */
 										);
 
+	// Register that the protocol has expert infos
 	expert_module_t *expert_baos = expert_register_protocol(proto_baos);
 
+	// Register HeaderFields, subtrees and ExpertItems for protocol
 	proto_register_field_array(proto_baos, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
 	expert_register_field_array(expert_baos, ei, array_length(ei));
 }
 
+// Register dissector as a heuristic dissector
 void
 proto_reg_handoff_baos(void)
 {
