@@ -48,6 +48,33 @@ check_serial_baos_pattern(tvbuff_t *tvb)
 	return UINT8_MAX;
 }
 
+bool
+check_packet_integrity(tvbuff_t *tvb, uint8_t trailer_start_index)
+{
+	// Check if FT 1.2 endbyte will be found at the expected index
+
+	// Store FT 1.2 endbyte in var if it's in TVB's boundaries,
+	// or assign UINT8_MAX to var if TVB is not long enough
+	const uint8_t ft12_endbyte = (tvb->length >= (uint16_t)(trailer_start_index + 2)) ?
+										tvb_get_uint8(tvb, trailer_start_index + 1) : UINT8_MAX;
+
+	return (ft12_endbyte == FT12_END_BYTE);
+}
+
+uint32_t
+calculateChecksum(tvbuff_t *tvb, uint8_t start_byte_index, uint8_t trailer_start_index)
+{
+	const uint8_t controllbyte_index = start_byte_index + 4;
+
+	uint32_t sum_of_bytes = 0;
+	for (uint8_t i = controllbyte_index; i < trailer_start_index; i++)
+	{
+		sum_of_bytes += tvb_get_uint8(tvb, i);
+	}
+	// Calculated checksum
+	return sum_of_bytes % 256;
+}
+
 void
 dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, const uint8_t start_byte_index)
 {
@@ -1212,12 +1239,15 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 	if (tvb->length < 10)
 		return false;
 
-	uint8_t start_byte_index = check_serial_baos_pattern(tvb);
+	const uint8_t start_byte_index = check_serial_baos_pattern(tvb);
 
 	// startByteIndex has either the index of the FT 1.2 start byte in the tvb
 	// or UINT8_MAX if the FT 1.2 - BAOS pattern has not been found
 	if (start_byte_index == UINT8_MAX)
 		return false;
+
+	// Checksum byte needs to be subtracted
+	const uint8_t baos_payload_len = tvb_get_uint8(tvb, start_byte_index + 1) - 1;
 
 	col_set_str(pinfo->cinfo, COL_INFO, "BAOS Telegram");
 
@@ -1388,6 +1418,67 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 			break;
 	}
 
+	// Dissection of the FT 1.2 trailer
+
+	const uint8_t trailer_start_index = start_byte_index + 5 + baos_payload_len;
+	const bool is_frame_complete = check_packet_integrity(tvb, trailer_start_index);
+
+	// Add ExpertInfo if FT 1.2 endbyte not found,
+	// meaning frame is likely incomplete
+	if (!is_frame_complete)
+	{
+		expert_add_info(pinfo, ft12_ti, &ei_ft12_incomplete_frame);
+	}
+
+	if (tvb->length >= (uint16_t)(trailer_start_index + 1))
+	{
+		// FT 1.2 trailer subtree
+		proto_item *ft12_trailer_ti = proto_tree_add_item(
+														ft12_tree,
+														hf_baos_ft12_trailer,
+														tvb,
+														trailer_start_index,
+														2,
+														ENC_NA
+														);
+		proto_tree *ft12_trailer_tree = proto_item_add_subtree(ft12_trailer_ti, ett_ft12_trailer);
+
+		// No ...ret_uint8 function available,
+		// so I'll just use a 4byte int
+		uint32_t ft12_checksum = 0;
+		const uint32_t calculated_checksum = calculateChecksum(tvb, start_byte_index, trailer_start_index);
+
+		// Add FT 1.2 checksum
+		proto_tree_add_item_ret_uint(
+							ft12_trailer_tree,
+							hf_baos_ft12_checksum,
+							tvb,
+							trailer_start_index,
+							1,
+							ENC_BIG_ENDIAN,
+							&ft12_checksum
+							);
+		
+		// Add ExpertInfo if found checksum doesn't match
+		// calculated expected checksum
+		if (ft12_checksum != calculated_checksum)
+		{
+			expert_add_info_format(pinfo, ft12_ti, &ei_ft12_checksum_error, "Expected checksum: 0x%x Found checksum: 0x%x", calculated_checksum, ft12_checksum);
+		}
+		if (tvb->length >= (uint16_t)(trailer_start_index + 2))
+		{
+			// Add FT 1.2 endbyte
+			proto_tree_add_item(
+								ft12_trailer_tree,
+								hf_baos_ft12_endbyte,
+								tvb,
+								trailer_start_index + 1,
+								1,
+								ENC_BIG_ENDIAN
+								);
+		}
+	}
+
 	return true;
 }
 
@@ -1429,6 +1520,28 @@ proto_register_baos(void)
 					"baos.ft12.controllbyte",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_ft12_control_bytes), 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_ft12_trailer,
+			{"FT 1.2 trailer",
+					"baos.ft12.ft12_trailer",
+					FT_PROTOCOL},
+		},
+		{
+			&hf_baos_ft12_checksum,
+			{"FT 1.2 checksum",
+					"baos.ft12.checksum",
+					FT_UINT8, BASE_HEX,
+					NULL, 0x0,
+					NULL, HFILL}
+		},
+		{
+			&hf_baos_ft12_endbyte,
+			{"FT 1.2 endbyte",
+					"baos.ft12.endbyte",
+					FT_UINT8, BASE_HEX,
+					NULL, 0x0,
 					NULL, HFILL}
 		},
 		{
@@ -1862,15 +1975,29 @@ proto_register_baos(void)
 		}
 	};
 
+	static ei_register_info ei[] = {
+		{
+			&ei_ft12_incomplete_frame,
+			{ "baos.ft12_incomplete", PI_MALFORMED, PI_WARN,
+			  "FT 1.2 likely incomplete", EXPFILL }
+		},
+		{
+			&ei_ft12_checksum_error,
+			{ "baos.checksum_error", PI_CHECKSUM, PI_ERROR,
+			  "FT 1.2 checksum error", EXPFILL }
+		}
+	};
+
 	static int *ett[] = {
 		&ett_baos,
 		&ett_ft12,
 		&ett_ft12_header,
+		&ett_ft12_trailer,
 		&ett_baos_payload,
 		&ett_version,
 		&ett_address,
 		&ett_dp_state,
-		&ett_ft12_footer
+		&ett_dp_config_flags
 	};
 
 	proto_baos = proto_register_protocol(
@@ -1881,6 +2008,8 @@ proto_register_baos(void)
 
 	proto_register_field_array(proto_baos, hf, array_length(hf));
 	proto_register_subtree_array(ett, array_length(ett));
+	expert_module_t *expert_baos = expert_register_protocol(proto_baos);
+	expert_register_field_array(expert_baos, ei, array_length(ei));
 }
 
 void

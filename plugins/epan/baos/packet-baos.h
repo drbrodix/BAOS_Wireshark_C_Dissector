@@ -4,11 +4,94 @@
 #include <epan/packet.h>
 #include <epan/dissectors/packet-usb.h>
 #include <epan/tvbuff-int.h>
+#include <epan/expert.h>
 
 #define FT12_START_BYTE 0x68
 #define FT12_END_BYTE 0x16
 #define BAOS_MAINSERVICE_CODE 0xF0
 #define BAOS_START_INDEX (start_byte_index + 5)
+
+// Protocol declaration
+static int proto_baos;
+
+// Header field declarations
+static int hf_baos_ft12;
+static int hf_baos_ft12_header;
+static int hf_baos_ft12_startbyte;
+static int hf_baos_ft12_lengthbyte;
+static int hf_baos_ft12_controllbyte;
+static int hf_baos_ft12_trailer;
+static int hf_baos_ft12_checksum;
+static int hf_baos_ft12_endbyte;
+static int hf_baos_baos_payload;
+static int hf_baos_baos_mainservice;
+static int hf_baos_baos_subservice;
+static int hf_baos_object_server_response;
+static int hf_baos_start_server_item_id;
+static int hf_baos_nr_of_server_items;
+static int hf_baos_server_item_id;
+static int hf_baos_server_item_length;
+static int hf_baos_server_item_data;
+static int hf_baos_si_hardware_type;
+static int hf_baos_si_version;
+static int hf_baos_si_version_major;
+static int hf_baos_si_version_minor;
+static int hf_baos_si_knx_man_code;
+static int hf_baos_si_app_id;
+static int hf_baos_si_serial_number;
+static int hf_baos_si_time_since_reset;
+static int hf_baos_si_server_item_status;
+static int hf_baos_si_buffer_size;
+static int hf_baos_si_server_item_desc_str_len;
+static int hf_baos_si_baudrate;
+static int hf_baos_si_knx_address;
+static int hf_baos_si_knx_address_area;
+static int hf_baos_si_knx_address_line;
+static int hf_baos_si_knx_address_device;
+static int hf_baos_start_dp_id;
+static int hf_baos_nr_of_dps;
+static int hf_baos_dp_id;
+static int hf_baos_dp_command;
+static int hf_baos_dp_state;
+static int hf_baos_dp_state_valid;
+static int hf_baos_dp_state_update;
+static int hf_baos_dp_state_read_req;
+static int hf_baos_dp_state_trans;
+static int hf_baos_dp_value_type;
+static int hf_baos_dp_config_flags;
+static int hf_baos_dp_config_trans_prio;
+static int hf_baos_dp_config_dp_comm;
+static int hf_baos_dp_config_read_from_bus;
+static int hf_baos_dp_config_write_from_bus;
+static int hf_baos_dp_config_read_on_init;
+static int hf_baos_dp_config_trans_to_bus;
+static int hf_baos_dp_config_update_on_res;
+static int hf_baos_dp_dpt;
+static int hf_baos_dp_length;
+static int hf_baos_dp_value;
+static int hf_baos_dp_filter;
+static int hf_baos_start_param_byte;
+static int hf_baos_nr_of_param_bytes;
+static int hf_baos_param_byte;
+static int hf_baos_start_desc_string;
+static int hf_baos_nr_of_desc_strings;
+static int hf_baos_desc_string_len;
+static int hf_baos_desc_string;
+
+// Expert info declarations
+static expert_field ei_ft12_incomplete_frame;
+static expert_field ei_ft12_checksum_error;
+
+// ETT subtree declarations
+static int ett_baos;
+static int ett_ft12;
+static int ett_ft12_header;
+static int ett_ft12_trailer;
+static int ett_baos_payload;
+static int ett_version;
+static int ett_address;
+static int ett_dp_state;
+static int ett_dp_config_flags;
 
 enum SUBSERVICE_CODES
 {
@@ -187,81 +270,6 @@ enum DP_CONFIG_FLAGS_TRANS_PRIOS
     ALARM_PRIO  = 0b10,
     LOW_PRIO    = 0b11
 };
-
-// Protocol declaration
-static int proto_baos;
-
-// Header field declarations
-static int hf_baos_ft12;
-static int hf_baos_ft12_header;
-static int hf_baos_ft12_startbyte;
-static int hf_baos_ft12_lengthbyte;
-static int hf_baos_ft12_controllbyte;
-static int hf_baos_baos_payload;
-static int hf_baos_baos_mainservice;
-static int hf_baos_baos_subservice;
-static int hf_baos_object_server_response;
-static int hf_baos_start_server_item_id;
-static int hf_baos_nr_of_server_items;
-static int hf_baos_server_item_id;
-static int hf_baos_server_item_length;
-static int hf_baos_server_item_data;
-static int hf_baos_si_hardware_type;
-static int hf_baos_si_version;
-static int hf_baos_si_version_major;
-static int hf_baos_si_version_minor;
-static int hf_baos_si_knx_man_code;
-static int hf_baos_si_app_id;
-static int hf_baos_si_serial_number;
-static int hf_baos_si_time_since_reset;
-static int hf_baos_si_server_item_status;
-static int hf_baos_si_buffer_size;
-static int hf_baos_si_server_item_desc_str_len;
-static int hf_baos_si_baudrate;
-static int hf_baos_si_knx_address;
-static int hf_baos_si_knx_address_area;
-static int hf_baos_si_knx_address_line;
-static int hf_baos_si_knx_address_device;
-static int hf_baos_start_dp_id;
-static int hf_baos_nr_of_dps;
-static int hf_baos_dp_id;
-static int hf_baos_dp_command;
-static int hf_baos_dp_state;
-static int hf_baos_dp_state_valid;
-static int hf_baos_dp_state_update;
-static int hf_baos_dp_state_read_req;
-static int hf_baos_dp_state_trans;
-static int hf_baos_dp_value_type;
-static int hf_baos_dp_config_flags;
-static int hf_baos_dp_config_trans_prio;
-static int hf_baos_dp_config_dp_comm;
-static int hf_baos_dp_config_read_from_bus;
-static int hf_baos_dp_config_write_from_bus;
-static int hf_baos_dp_config_read_on_init;
-static int hf_baos_dp_config_trans_to_bus;
-static int hf_baos_dp_config_update_on_res;
-static int hf_baos_dp_dpt;
-static int hf_baos_dp_length;
-static int hf_baos_dp_value;
-static int hf_baos_dp_filter;
-static int hf_baos_start_param_byte;
-static int hf_baos_nr_of_param_bytes;
-static int hf_baos_param_byte;
-static int hf_baos_start_desc_string;
-static int hf_baos_nr_of_desc_strings;
-static int hf_baos_desc_string_len;
-static int hf_baos_desc_string;
-
-// ETT subtree declarations
-static int ett_baos;
-static int ett_ft12;
-static int ett_ft12_header;
-static int ett_baos_payload;
-static int ett_version;
-static int ett_address;
-static int ett_dp_state;
-static int ett_dp_config_flags;
-static int ett_ft12_footer;
 
 static const value_string vs_ft12_control_bytes[] = {
     {CR_TX_EVEN, "TX - Even"},
@@ -443,6 +451,12 @@ static const value_string vs_dp_state_trans_states[] = {
 
 uint8_t
 check_serial_baos_pattern(tvbuff_t *tvb);
+
+bool
+check_packet_integrity(tvbuff_t *tvb, uint8_t trailer_start_index);
+
+uint32_t
+calculateChecksum(tvbuff_t *tvb, uint8_t start_byte_index, uint8_t trailer_start_index);
 
 void
 dissect_get_server_item_req(tvbuff_t *tvb, proto_tree *baos_payload_tree, uint8_t start_byte_index);
