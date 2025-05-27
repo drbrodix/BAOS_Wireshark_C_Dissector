@@ -199,31 +199,20 @@ dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, 
 					case PROTO_VERSION_BIN:
 					case PROTO_VERSION_WEBSERVICE:
 					case PROTO_VERSION_RESTSERVICE:
-						proto_item *version_ti = proto_tree_add_item(
-																	baos_payload_tree,
-																	hf_baos_si_version,
-																	tvb,
-																	server_item_data_offset,
-																	server_item_data_length,
-																	ENC_BIG_ENDIAN
-																	);
-						proto_tree *version_tree = proto_item_add_subtree(version_ti,ett_version);
-						proto_tree_add_item(
-									version_tree,
-									hf_baos_si_version_major,
-									tvb,
-									server_item_data_offset,
-									server_item_data_length,
-									ENC_BIG_ENDIAN
-									);
-						proto_tree_add_item(
-									version_tree,
-									hf_baos_si_version_minor,
-									tvb,
-									server_item_data_offset,
-									server_item_data_length,
-									ENC_BIG_ENDIAN
-									);
+						static int* const si_version_bits[] = {
+							&hf_baos_si_version_major,
+							&hf_baos_si_version_minor,
+							NULL
+						};
+						proto_tree_add_bitmask(
+												baos_payload_tree,
+												tvb,
+												server_item_data_offset,
+												hf_baos_si_version,
+												ett_baos_payload,
+												si_version_bits,
+												ENC_BIG_ENDIAN
+												);
 						break;
 					case KNX_MANUFACTURER_CODE_DEV:
 					case KNX_MANUFACTURER_CODE_APP:
@@ -310,39 +299,21 @@ dissect_long_server_item_telegram(tvbuff_t *tvb, proto_tree *baos_payload_tree, 
 									);
 						break;
 					case INDIVIDUAL_ADDRESS:
-						proto_item *address_ti = proto_tree_add_item(
-											baos_payload_tree,
-											hf_baos_si_knx_address,
-											tvb,
-											server_item_data_offset,
-											server_item_data_length,
-											ENC_BIG_ENDIAN
-											);
-						proto_tree *address_tree = proto_item_add_subtree(address_ti,ett_address);
-						proto_tree_add_item(
-									address_tree,
-									hf_baos_si_knx_address_area,
-									tvb,
-									server_item_data_offset,
-									1,
-									ENC_BIG_ENDIAN
-									);
-						proto_tree_add_item(
-									address_tree,
-									hf_baos_si_knx_address_line,
-									tvb,
-									server_item_data_offset,
-									1,
-									ENC_BIG_ENDIAN
-									);
-						proto_tree_add_item(
-									address_tree,
-									hf_baos_si_knx_address_device,
-									tvb,
-									server_item_data_offset + 1,
-									1,
-									ENC_BIG_ENDIAN
-									);
+						static int* const si_knx_address_bits[] = {
+							&hf_baos_si_knx_address_area,
+							&hf_baos_si_knx_address_line,
+							&hf_baos_si_knx_address_device,
+							NULL
+						};
+						proto_tree_add_bitmask(
+												baos_payload_tree,
+												tvb,
+												server_item_data_offset,
+												hf_baos_si_knx_address,
+												ett_baos_payload,
+												si_knx_address_bits,
+												ENC_BIG_ENDIAN
+												);
 						break;
 					default:
 						break;
@@ -800,71 +771,25 @@ dissect_get_datapoint_desc_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, uin
 		// Add datapoint config flags
 		if (tvb->length >= (uint16_t)(dp_config_flags_offset + 1))
 		{
-			proto_item *config_flags_ti = proto_tree_add_item(
-															baos_payload_tree,
-															hf_baos_dp_config_flags,
-															tvb,
-															dp_config_flags_offset,
-															1,
-															ENC_BIG_ENDIAN
-															);
-			proto_tree *config_flags_tree = proto_item_add_subtree(config_flags_ti,ett_dp_config_flags);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_trans_prio,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_dp_comm,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_read_from_bus,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_write_from_bus,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_read_on_init,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_trans_to_bus,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								config_flags_tree,
-								hf_baos_dp_config_update_on_res,
-								tvb,
-								dp_config_flags_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
+			static int* const config_flags_bits[] = {
+				&hf_baos_dp_config_trans_prio,
+				&hf_baos_dp_config_dp_comm,
+				&hf_baos_dp_config_read_from_bus,
+				&hf_baos_dp_config_write_from_bus,
+				&hf_baos_dp_config_read_on_init,
+				&hf_baos_dp_config_trans_to_bus,
+				&hf_baos_dp_config_update_on_res,
+				NULL
+			};
+			proto_tree_add_bitmask(
+									baos_payload_tree,
+									tvb,
+									dp_config_flags_offset,
+									hf_baos_dp_config_flags,
+									ett_baos_payload,
+									config_flags_bits,
+									ENC_BIG_ENDIAN
+									);
 		}
 		// Add datapoint type
 		if (tvb->length >= (uint16_t)(dp_dpt_offset + 1))
@@ -1042,47 +967,22 @@ dissect_get_datapoint_value_res(tvbuff_t *tvb, proto_tree *baos_payload_tree, ui
 		// Add datapoint state
 		if (tvb->length >= (uint16_t)(dp_state_offset + 1))
 		{
-			proto_item *state_ti = proto_tree_add_item(
-								baos_payload_tree,
-								hf_baos_dp_state,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree *state_tree = proto_item_add_subtree(state_ti,ett_dp_state);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_valid,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_update,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_read_req,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
-			proto_tree_add_item(
-								state_tree,
-								hf_baos_dp_state_trans,
-								tvb,
-								dp_state_offset,
-								1,
-								ENC_BIG_ENDIAN
-								);
+			static int* const dp_state_bits[] = {
+				&hf_baos_dp_state_valid,
+				&hf_baos_dp_state_update,
+				&hf_baos_dp_state_read_req,
+				&hf_baos_dp_state_trans,
+				NULL
+			};
+			proto_tree_add_bitmask(
+									baos_payload_tree,
+									tvb,
+									dp_state_offset,
+									hf_baos_dp_state,
+									ett_baos_payload,
+									dp_state_bits,
+									ENC_BIG_ENDIAN
+									);
 		}
 		// Add datapoint length
 		if (tvb->length >= (uint16_t)(dp_length_offset + 1))
@@ -1525,7 +1425,7 @@ dissect_baos_heur(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *dat
 		{
 			expert_add_info_format(pinfo, ft12_ti, &ei_ft12_checksum_error, "Expected checksum: 0x%x Found checksum: 0x%x", calculated_checksum, ft12_checksum);
 		}
-		if (tvb->length >= (uint16_t)(trailer_start_index + 2))
+		if (tvb->length >= trailer_start_index + 2u)
 		{
 			// Add FT 1.2 endbyte
 			proto_tree_add_item(
@@ -1783,24 +1683,24 @@ proto_register_baos(void)
 			&hf_baos_si_knx_address_area,
 			{"Area address",
 					"baos.server_item.knx_area_address",
-					FT_UINT8, BASE_DEC,
-					NULL, 0xF0,
+					FT_UINT16, BASE_DEC,
+					NULL, 0xF000,
 					NULL, HFILL}
 		},
 		{
 			&hf_baos_si_knx_address_line,
 			{"Line address",
 					"baos.server_item.knx_line_address",
-					FT_UINT8, BASE_DEC,
-					NULL, 0x0F,
+					FT_UINT16, BASE_DEC,
+					NULL, 0x0F00,
 					NULL, HFILL}
 		},
 		{
 			&hf_baos_si_knx_address_device,
 			{"Device address",
 					"baos.server_item.knx_device_address",
-					FT_UINT8, BASE_DEC,
-					NULL, 0xFF,
+					FT_UINT16, BASE_DEC,
+					NULL, 0x00FF,
 					NULL, HFILL}
 		},
 		{
@@ -1917,7 +1817,7 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_trans_prio,
-			{"Valid flag",
+			{"Transmit priority",
 					"baos.dp_config.trans_prio",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_trans_prios), 0b0000'0011,
@@ -1925,7 +1825,7 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_dp_comm,
-			{"Update flag",
+			{"Datapoint communication",
 					"baos.dp_config.dp_comm",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_tf), 0b0000'0100,
@@ -1933,7 +1833,7 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_read_from_bus,
-			{"Read request flag",
+			{"Read from bus",
 					"baos.dp_config.read_from_bus",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_tf), 0b0000'1000,
@@ -1941,7 +1841,7 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_write_from_bus,
-			{"Transmission flag",
+			{"Write from bus",
 					"baos.dp_config.write_from_bus",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_tf), 0b0001'0000,
@@ -1949,7 +1849,7 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_read_on_init,
-			{"Update flag",
+			{"Read on init",
 					"baos.dp_config.read_on_init",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_tf), 0b0010'0000,
@@ -1957,7 +1857,7 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_trans_to_bus,
-			{"Read request flag",
+			{"Transmit to bus",
 					"baos.dp_config.trans_to_bus",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_tf), 0b0100'0000,
@@ -1965,8 +1865,8 @@ proto_register_baos(void)
 		},
 		{
 			&hf_baos_dp_config_update_on_res,
-			{"Transmission flag",
-					"baos.dp_config.trans_to_bus",
+			{"Update on response",
+					"baos.dp_config.update_on_res",
 					FT_UINT8, BASE_HEX,
 					VALS(vs_dp_config_flags_tf), 0b1000'0000,
 					NULL, HFILL}
@@ -2057,11 +1957,7 @@ proto_register_baos(void)
 		&ett_ft12,
 		&ett_ft12_header,
 		&ett_ft12_trailer,
-		&ett_baos_payload,
-		&ett_version,
-		&ett_address,
-		&ett_dp_state,
-		&ett_dp_config_flags
+		&ett_baos_payload
 	};
 
 	// Register protocol

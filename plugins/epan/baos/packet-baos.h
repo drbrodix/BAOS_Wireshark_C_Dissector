@@ -103,10 +103,6 @@ static int ett_ft12;
 static int ett_ft12_header;
 static int ett_ft12_trailer;
 static int ett_baos_payload;
-static int ett_version;
-static int ett_address;
-static int ett_dp_state;
-static int ett_dp_config_flags;
 
 // Refer to the BAOS documentation to
 // find out more about the available subservices.
@@ -298,7 +294,8 @@ static const value_string vs_ft12_control_bytes[] = {
     {CR_TX_EVEN, "TX - Even"},
     {CR_TX_ODD, "TX - Odd"},
     {CR_RX_EVEN, "RX - Even"},
-    {CR_RX_ODD, "RX - Odd"}
+    {CR_RX_ODD, "RX - Odd"},
+    {0, NULL}
 };
 
 // Refer to Appendix B in the BAOS documentation
@@ -315,13 +312,15 @@ static const value_string vs_object_server_response[] = {
     {BAD_COMMAND_VALUE, "Bad command / value"},
     {BAD_LENGTH, "Bad length"},
     {MESSAGE_INCONSISTENT, "Message inconsistent"},
-    {OBJECT_SERVER_BUSY, "Object server is busy"}
+    {OBJECT_SERVER_BUSY, "Object server is busy"},
+    {0, NULL}
 };
 
 static const value_string vs_baudrate[] = {
     {BAUD_UNKNOWN, "Unknown Baudrate"},
     {BAUD_19200, "19200"},
-    {BAUD_115200, "115200"}
+    {BAUD_115200, "115200"},
+    {0, NULL}
 };
 
 // Refer to Appendix D in the BAOS documentation to
@@ -349,7 +348,8 @@ static const value_string vs_baos_dpts[] = {
     {DPT20, "DPT 20 (1 Byte, HVAC Mode)"},
     {DPT232, "DPT 232 (3 Byte, Color RGB)"},
     {DPT251, "DPT 251 (6 Byte, Color RGBW)"},
-    {UNKNOWN_DPT, "Unknown DPT"}
+    {UNKNOWN_DPT, "Unknown DPT"},
+    {0, NULL}
 };
 
 // Refer to Appendix C in the BAOS documentation
@@ -369,19 +369,22 @@ static const value_string vs_baos_dp_value_types[] = {
     {DP_VT_6BYTE, "6 Bytes"},
     {DP_VT_8BYTE, "8 Bytes"},
     {DP_VT_10BYTE, "10 Bytes"},
-    {DP_VT_14BYTE, "14 Bytes"}
+    {DP_VT_14BYTE, "14 Bytes"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_config_flags_tf[] = {
     {false, "Disabled"},
     {true, "Enabled"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_config_flags_trans_prios[] = {
     {SYSTEM_PRIO, "System priority"},
     {HIGH_PRIO, "High priority"},
     {ALARM_PRIO, "Alarm priority"},
-    {LOW_PRIO, "Low priority"}
+    {LOW_PRIO, "Low priority"},
+    {0, NULL}
 };
 
 static const true_false_string vs_server_item_status = {
@@ -409,7 +412,8 @@ static const value_string vs_subservices[] = {
     {GET_PARAMETER_BYTE_RES_CODE, "GetParameterByte.Res"},
     {SET_PARAMETER_BYTE_RES_CODE, "SetParameterByte.Res"},
     {DATAPOINT_VALUE_IND_CODE, "DatapointValue.Ind"},
-    {SERVER_ITEM_IND_CODE, "ServerItem.Ind"}
+    {SERVER_ITEM_IND_CODE, "ServerItem.Ind"},
+    {0, NULL}
 };
 
 // Refer to Appendix A in the BAOS documentation to
@@ -436,7 +440,8 @@ static const value_string vs_server_items[] = {
     {INDICATION_SENDING, "Indication Sending"},
     {PROTO_VERSION_WEBSERVICE, "Protocol Version (WebService)"},
     {PROTO_VERSION_RESTSERVICE, "Protocol Version (RestService)"},
-    {INDIVIDUAL_ADDRESS, "Individual Address"}
+    {INDIVIDUAL_ADDRESS, "Individual Address"},
+    {0, NULL}
 };
 
 // Refer to the BAOS documentation to
@@ -447,35 +452,41 @@ static const value_string vs_dp_commands[] = {
     {SEND_VALUE_ON_BUS, "Send value on bus"},
     {SET_NEW_VALUE_SEND_ON_BUS, "Set new value and send on bus"},
     {READ_NEW_VALUE_VIA_BUS, "Read new value via bus"},
-    {CLEAR_DP_TRANSMISSION_STATE, "Clear datapoint transmission state"}
+    {CLEAR_DP_TRANSMISSION_STATE, "Clear datapoint transmission state"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_filters[] = {
     {GET_ALL_DP_VALUES, "Get all datapoint values"},
     {GET_VALID_DP_VALUES, "Get only valid datapoint values"},
-    {GET_UPDATED_DP_VALUES, "Get only updated datapoint values"}
+    {GET_UPDATED_DP_VALUES, "Get only updated datapoint values"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_state_valid_flags[] = {
     {OBJECT_VAL_UNKNOWN, "Object value is unknown"},
-    {OBJECT_ALREADY_RECEIVED, "Object has already been received"}
+    {OBJECT_ALREADY_RECEIVED, "Object has already been received"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_state_update_flags[] = {
     {VALUE_NOT_UPDATED, "Value is not updated"},
-    {VALUE_UPDATED_FROM_BUS, "Value is updated from bus"}
+    {VALUE_UPDATED_FROM_BUS, "Value is updated from bus"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_state_read_req_flags[] = {
     {SEND_WRITE_REQ, "Write request should be sent"},
-    {SEND_READ_REQ, "Read request should be sent"}
+    {SEND_READ_REQ, "Read request should be sent"},
+    {0, NULL}
 };
 
 static const value_string vs_dp_state_trans_states[] = {
     {IDLE_OK, "Idle/OK"},
     {IDLE_ERROR, "Idle/error"},
     {TRANS_IN_PROGRESS, "Transmission in progress"},
-    {TRANS_REQUEST, "Transmission request"}
+    {TRANS_REQUEST, "Transmission request"},
+    {0, NULL}
 };
 
 // Function prototypes
